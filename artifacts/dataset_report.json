@@ -1,0 +1,45 @@
+{
+ "source": "CA_Player.csv",
+ "rows": 741679,
+ "dropped_non_game_rows": 48,
+ "date_range": [
+  "2026-08-01",
+  "2026-08-31"
+ ],
+ "split_date": "2026-08-25",
+ "players_train": 23673,
+ "games_trainable": 3202,
+ "games_displayable": 351,
+ "interactions_train": 296205,
+ "interactions_test": 99930,
+ "test_repeat_cells": 43530,
+ "test_discovery_cells": 56400,
+ "density_train_pct": 0.391,
+ "families": {
+  "opaque_hash": {
+   "games": 2625,
+   "stake": 118488245.16,
+   "stake_share_pct": 83.0
+  },
+  "named": {
+   "games": 351,
+   "stake": 11544889.38,
+   "stake_share_pct": 8.1
+  },
+  "gpas_slug": {
+   "games": 209,
+   "stake": 11985655.84,
+   "stake_share_pct": 8.4
+  },
+  "short_code": {
+   "games": 17,
+   "stake": 722644.81,
+   "stake_share_pct": 0.5
+  },
+  "non_game": {
+   "games": 1,
+   "stake": 1551.2,
+   "stake_share_pct": 0.0
+  }
+ }
+}

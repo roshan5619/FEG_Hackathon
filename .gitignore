@@ -1,0 +1,61 @@
+# ---------------------------------------------------------------------------
+# FEG-supplied source data — NEVER COMMIT
+#
+# The hackathon event export is proprietary FEG data. The repository ships only
+# the derived, anonymised aggregates in assets/session_intel.json and the priors
+# in src/engine/model.json. Keep the raw files out.
+# ---------------------------------------------------------------------------
+*.xlsx
+*.xls
+*.csv
+*.parquet
+top_casino_users_event_logs*
+hackathon_casino_trends*
+data/
+raw/
+
+# Large media — link it in demo/demo-video-link.md instead
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# ---------------------------------------------------------------------------
+# Secrets
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets.*
+credentials.*
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---------------------------------------------------------------------------
+# Editors / OS
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

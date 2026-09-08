@@ -1,0 +1,62 @@
+# PSK Game Recommender - tunable thresholds
+#
+# Copy to config/thresholds.yaml to override. Nothing here is a secret.
+#
+# IMPORTANT: hard gates are deliberately absent from this file. Self-exclusion,
+# a hit on the national register of excluded players, unverified age and a
+# reached deposit limit are legal preconditions, not tunables. They live in
+# src/recsys/responsible.py and no configuration can relax them.
+
+model:
+  # Popularity correction on the item-item similarity matrix.
+  # 0.0 is a MEASURED choice, not a default left alone: positive values damp
+  # popular items and make discovery strictly worse on this data; negative
+  # values improve headline discovery only by converging on the popularity
+  # baseline, collapsing catalogue coverage from 726 games to 87.
+  # See docs/evaluation.md section 2.1.
+  alpha: 0.0
+
+  # Co-occurrence shrinkage. Two games co-played by three people should not
+  # look as similar as two co-played by three hundred.
+  shrink: 20.0
+
+  # Neighbours retained per item. Bounds memory and denoises the tail.
+  top_k: 300
+
+lobby:
+  # Games treated as "head". Excluded from the Discover row, and the boundary
+  # used by the tail_discovery evaluation. 20/50/100 all reproduce the result.
+  head_n: 50
+
+  # Tiles per row.
+  row_size: 8
+
+  # Diversity cap: at most this many games from one provider in a single row,
+  # so a single studio cannot own the lobby.
+  max_per_provider: 3
+
+responsible_play:
+  # Graded behavioural indicators. Each adds to a score; the score picks a state.
+  long_session_s: 3600
+  very_long_session_s: 7200
+  deposit_reentry_limit: 2
+
+  # Score thresholds per state.
+  states:
+    mild: 1        # no change to the lobby; timer surfaced by the host client
+    moderate: 3    # every engagement row withheld; only "Continue playing" remains
+    severe: 5      # as moderate, plus limit tools and cool-off, non-dismissable
+
+rollout:
+  # Log recommendations against the live lobby without rendering them, and
+  # compare, before switching any traffic.
+  shadow_mode: true
+  rollout_fraction: 0.0
+
+  # Each row ships independently. "trending" is the existing behaviour.
+  feature_flags:
+    trending: true
+    continue_playing: false
+    picked_for_you: false
+    discover: false
+    new_releases: false

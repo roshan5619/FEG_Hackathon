@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PSK Personalised Lobby</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* A casino lobby is a dark surface everywhere it ships. This commits to one
+   look deliberately rather than half-supporting two, and paints every colour
+   explicitly so it never borrows the host's theme. */
+:root{
+  color-scheme: dark;
+  --plane:#0a0d11; --surface:#141a21; --raise:#1b232c; --sunk:#10161c;
+  --ink:#ffffff; --ink2:#b9c3d0; --muted:#7f8b99;
+  --line:rgba(255,255,255,.10); --rule:#2a333f;
+  --accent:#3987e5; --accent-dim:#1c5cab;
+  --cf:#3987e5; --pop:#d95926; --new:#199e70; --own:#8b93a0;
+  --good:#0ca30c; --warn:#fab219; --crit:#e0564f;
+  --sans:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--plane);color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:0 22px}
+h1,h2,h3{margin:0;text-wrap:balance}
+button,select,input{font-family:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+
+/* masthead */
+.mast{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+.mast-in{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:13px 0}
+.brand{font-weight:800;font-size:18px;letter-spacing:-.02em}
+.brand span{color:var(--accent)}
+.mock{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--warn);border:1px solid currentColor;border-radius:2px;padding:2px 7px}
+.mast .spacer{margin-left:auto}
+label.f{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px}
+select,.btn{background:var(--raise);color:var(--ink);border:1px solid var(--rule);
+  border-radius:3px;padding:7px 10px;font-size:13px}
+select{min-width:230px}
+.btn{cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+
+/* control strip */
+.controls{background:var(--sunk);border-bottom:1px solid var(--line)}
+.controls-in{display:flex;flex-wrap:wrap;gap:16px 26px;align-items:flex-end;padding:14px 0}
+.toggles{display:flex;flex-wrap:wrap;gap:8px}
+.tg{display:inline-flex;align-items:center;gap:7px;background:var(--raise);
+  border:1px solid var(--rule);border-radius:3px;padding:6px 10px;font-size:12.5px;
+  color:var(--ink2);cursor:pointer;user-select:none}
+.tg input{accent-color:var(--crit);margin:0}
+.tg:hover{border-color:var(--muted)}
+.tg.on{border-color:var(--crit);color:var(--ink)}
+
+/* status banner */
+.status{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;
+  padding:11px 14px;border-radius:3px;margin:16px 0 4px;font-size:13px}
+.status.normal{background:rgba(12,163,12,.10);border:1px solid rgba(12,163,12,.35)}
+.status.mild,.status.moderate{background:rgba(250,178,25,.10);border:1px solid rgba(250,178,25,.38)}
+.status.severe,.status.blocked{background:rgba(224,86,79,.12);border:1px solid rgba(224,86,79,.45)}
+.status b{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase}
+.status .reasons{color:var(--ink2);font-size:12.5px}
+
+/* rows */
+.row{margin:30px 0 0}
+.row-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-bottom:11px}
+.row-head h2{font-size:17px;font-weight:700;letter-spacing:-.015em}
+.row-head .sub{font-size:12.5px;color:var(--muted)}
+.src{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+  padding:2px 7px;border-radius:2px;border:1px solid currentColor;margin-left:auto;white-space:nowrap}
+.src.item_item_cf,.src.item_item_cf_tail{color:var(--cf)}
+.src.most_played{color:var(--pop)}
+.src.cold_items{color:var(--new)}
+.src.user_history{color:var(--own)}
+
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:170px;gap:12px;
+  overflow-x:auto;padding-bottom:8px;scroll-snap-type:x proximity}
+.strip::-webkit-scrollbar{height:8px}
+.strip::-webkit-scrollbar-thumb{background:var(--rule);border-radius:4px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:4px;
+  overflow:hidden;display:flex;flex-direction:column;scroll-snap-align:start}
+.art{height:96px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:26px;font-weight:600;color:rgba(255,255,255,.82);
+  letter-spacing:-.02em;position:relative}
+.art::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.45))}
+.tile-body{padding:9px 10px 10px;display:flex;flex-direction:column;gap:4px;flex:1}
+.tile-title{font-size:13px;font-weight:600;line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile-prov{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.tile-why{font-size:11px;color:var(--ink2);margin-top:auto;padding-top:6px;
+  border-top:1px solid var(--line);line-height:1.35}
+
+/* blocked / empty */
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:4px;
+  padding:26px 24px;margin-top:22px}
+.empty h3{font-size:15px;margin-bottom:7px}
+.empty p{margin:0;color:var(--ink2);font-size:13.5px;max-width:66ch}
+.empty ul{margin:10px 0 0;padding-left:18px;color:var(--ink2);font-size:13px}
+
+/* footer note */
+.note{margin:36px 0 0;padding:16px 18px;background:var(--sunk);border:1px solid var(--line);
+  border-left:2px solid var(--accent);border-radius:3px}
+.note b{display:block;font-size:13.5px;margin-bottom:5px}
+.note p{margin:0 0 8px;color:var(--ink2);font-size:13px;max-width:78ch}
+.note p:last-child{margin-bottom:0}
+.note code{font-family:var(--mono);font-size:11.5px;background:var(--raise);padding:1px 5px;border-radius:2px}
+footer{padding:26px 0 44px;color:var(--muted);font-size:12px}
+.loading{padding:40px 0;color:var(--muted);font-family:var(--mono);font-size:13px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="mast"><div class="wrap"><div class="mast-in">
+  <div class="brand">PSK <span>Casino</span></div>
+  <span class="mock">Prototype · not affiliated</span>
+  <div class="spacer"></div>
+  <div>
+    <label class="f" for="player">Signed in as</label>
+    <select id="player"><option>loading…</option></select>
+  </div>
+</div></div></div>
+
+<div class="controls"><div class="wrap"><div class="controls-in">
+  <div>
+    <span class="f">Responsible-play state (simulated account flags)</span>
+    <div class="toggles" id="toggles"></div>
+  </div>
+</div></div></div>
+
+<div class="wrap">
+  <div id="status"></div>
+  <div id="rows"><div class="loading">Loading lobby…</div></div>
+
+  <div class="note">
+    <b>What you are looking at</b>
+    <p><strong>Trending now</strong> is popularity — the row psk.hr ships today as
+    <em>Najigranije</em>. We kept it because it measurably wins: on next-game prediction,
+    global popularity beat collaborative filtering outright (NDCG@10 <code>0.305</code> vs
+    <code>0.056</code>). Replacing it would have made the lobby worse.</p>
+    <p><strong>Picked for you</strong> and <strong>Discover something new</strong> are
+    item-item collaborative filtering. Once the global top-50 are removed, CF beats
+    popularity <code>2.25×</code> on NDCG@10 with <code>18×</code> the catalogue coverage
+    (680 games against 37) — and <code>76.5%</code> of all discovery plays live in that tail.
+    Popularity structurally cannot reach it.</p>
+    <p><strong>New releases</strong> exists because <code>12.1%</code> of discovery is on
+    games with zero play history. No collaborative model can ever retrieve those, so they
+    get their own row instead of being silently unreachable.</p>
+    <p>Every tile carries the literal top contributor to its score, not a generated
+    rationale. Where the source game is an opaque code the copy says so rather than
+    inventing a name. Full method and results in <code>docs/evaluation.md</code>.</p>
+  </div>
+
+  <footer>
+    Anonymised FEG sample data · players are pre-hashed identifiers · no personal data.
+    Recommendations never reach a self-excluded account: the gate runs before scoring.
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(s){ return document.querySelector(s); };
+  var el = function(t,c,h){ var e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e; };
+  var esc = function(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); };
+
+  var FLAGS = [
+    ["self_excluded", "Self-excluded"],
+    ["chasing_losses", "Loss chasing"],
+    ["stake_above_own_history", "Stake above own history"]
+  ];
+  var state = { player: null, flags: {}, deposits: 0 };
+
+  // Deterministic tile colour from the title, so a game looks the same every
+  // load. Real thumbnails would come from a game catalogue we do not have.
+  function hue(s){ var h=0; for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return h%360; }
+  function art(title){
+    var h = hue(title);
+    var d = el("div","art", esc(title.replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase()));
+    d.style.background = "linear-gradient(140deg,hsl("+h+" 42% 30%),hsl("+((h+38)%360)+" 46% 19%))";
+    return d;
+  }
+
+  function tile(t){
+    var d = el("div","tile");
+    d.appendChild(art(t.title));
+    var b = el("div","tile-body");
+    b.appendChild(el("div","tile-title", esc(t.title)));
+    b.appendChild(el("div","tile-prov", esc(t.provider || "—")));
+    b.appendChild(el("div","tile-why", esc(t.why)));
+    d.appendChild(b);
+    return d;
+  }
+
+  function renderStatus(rp, suppressed){
+    var box = $("#status"); box.textContent = "";
+    var s = (rp.state || "NORMAL").toLowerCase();
+    var d = el("div","status "+s);
+    d.appendChild(el("b", null, "Responsible play: " + esc(rp.state)));
+    var msg = rp.hard_gate
+      ? "Hard gate. No recommendation is generated for this account at all."
+      : (suppressed && suppressed.length
+          ? "Engagement rows withheld: " + suppressed.join(", ")
+          : "No harmful-play indicators. Full lobby served.");
+    d.appendChild(el("span","reasons", esc(msg)));
+    if(rp.reasons && rp.reasons.length)
+      d.appendChild(el("span","reasons", "· " + esc(rp.reasons.join(" "))));
+    box.appendChild(d);
+  }
+
+  function render(data){
+    renderStatus(data.responsible_play || {}, data.suppressed_rows || []);
+    var host = $("#rows"); host.textContent = "";
+
+    if(!data.rows || !data.rows.length){
+      var e = el("div","empty");
+      e.appendChild(el("h3", null, "No recommendations for this account"));
+      e.appendChild(el("p", null,
+        "The responsible-play gate resolved to <strong>" + esc((data.responsible_play||{}).state) +
+        "</strong>. Nothing from the recommender reaches a blocked account — it is not " +
+        "scored and then filtered, it is never scored."));
+      if(data.required_surfaces && data.required_surfaces.length){
+        var ul = el("ul");
+        data.required_surfaces.forEach(function(s){ ul.appendChild(el("li", null, esc(s))); });
+        e.appendChild(el("p", null, "Surfaces that must be shown instead:"));
+        e.appendChild(ul);
+      }
+      host.appendChild(e);
+      return;
+    }
+
+    if(data.cold_start){
+      var c = el("div","empty");
+      c.appendChild(el("h3", null, "Cold start"));
+      c.appendChild(el("p", null, esc(data.cold_start)));
+      host.appendChild(c);
+    }
+
+    data.rows.forEach(function(r){
+      var sec = el("section","row");
+      var head = el("div","row-head");
+      head.appendChild(el("h2", null, esc(r.title)));
+      head.appendChild(el("span","sub", esc(r.subtitle)));
+      head.appendChild(el("span","src "+esc(r.source), esc(r.source)));
+      sec.appendChild(head);
+      var strip = el("div","strip");
+      r.tiles.forEach(function(t){ strip.appendChild(tile(t)); });
+      sec.appendChild(strip);
+      host.appendChild(sec);
+    });
+  }
+
+  function query(){
+    var p = new URLSearchParams();
+    FLAGS.forEach(function(f){ if(state.flags[f[0]]) p.set(f[0], "true"); });
+    if(state.deposits) p.set("deposits_this_session", String(state.deposits));
+    return p.toString();
+  }
+
+  function load(){
+    if(!state.player) return;
+    $("#rows").innerHTML = '<div class="loading">Loading lobby…</div>';
+    fetch("/recommendations/" + encodeURIComponent(state.player) + "?" + query())
+      .then(function(r){ return r.json(); })
+      .then(render)
+      .catch(function(e){
+        $("#rows").innerHTML = '<div class="empty"><h3>Could not load</h3><p>' +
+          esc(e.message) + '</p></div>';
+      });
+  }
+
+  function buildToggles(){
+    var host = $("#toggles");
+    FLAGS.forEach(function(f){
+      var lab = el("label","tg");
+      var cb = el("input"); cb.type = "checkbox";
+      cb.addEventListener("change", function(){
+        state.flags[f[0]] = cb.checked;
+        lab.classList.toggle("on", cb.checked);
+        load();
+      });
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(f[1]));
+      host.appendChild(lab);
+    });
+    var lab = el("label","tg");
+    var sel = el("select"); sel.style.minWidth = "auto"; sel.style.padding = "2px 6px";
+    [0,1,2,3,4].forEach(function(n){
+      var o = el("option", null, String(n)); o.value = n; sel.appendChild(o);
+    });
+    sel.addEventListener("change", function(){
+      state.deposits = Number(sel.value);
+      lab.classList.toggle("on", state.deposits >= 2);
+      load();
+    });
+    lab.appendChild(document.createTextNode("Deposits this session"));
+    lab.appendChild(sel);
+    host.appendChild(lab);
+  }
+
+  fetch("/players?limit=15").then(function(r){ return r.json(); }).then(function(d){
+    var sel = $("#player"); sel.textContent = "";
+    (d.players || []).forEach(function(p, i){
+      var o = el("option", null,
+        "Player " + String(i + 1).padStart(2, "0") +
+        " · " + p.named_games + " named / " + p.games_played + " games");
+      o.value = p.player_id;
+      sel.appendChild(o);
+    });
+    sel.addEventListener("change", function(){ state.player = sel.value; load(); });
+    if(sel.options.length){ state.player = sel.options[0].value; load(); }
+  }).catch(function(e){
+    $("#rows").innerHTML = '<div class="empty"><h3>API not reachable</h3><p>Start it with ' +
+      '<code>uvicorn src.api.app:app --port 8000</code> and reload.</p></div>';
+  });
+
+  buildToggles();
+})();
+</script>
+</body>
+</html>

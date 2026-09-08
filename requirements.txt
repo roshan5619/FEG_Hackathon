@@ -1,0 +1,21 @@
+# PSK Game Recommender - Python 3.10+
+
+# --- model & pipeline ------------------------------------------------------
+numpy==1.26.4
+scipy==1.16.2          # sparse matrices; the item-item model is one sparse product
+
+# --- API -------------------------------------------------------------------
+fastapi==0.134.0
+uvicorn[standard]==0.40.0
+pydantic==2.11.7
+
+# --- tests -----------------------------------------------------------------
+pytest==8.3.4
+httpx==0.28.1          # required by fastapi.testclient
+
+# Deliberately NOT dependencies:
+#   pandas    - the pipeline reads one CSV with the stdlib csv module; pandas
+#               would be 60 MB for a single pass.
+#   implicit  - ALS is ~30 lines in src/recsys/item_item.py. A compiled
+#               dependency for one comparison model is not worth it.
+#   sklearn   - nothing here needs it.

@@ -1,0 +1,12 @@
+{
+ "model": "item_item",
+ "alpha": 0.0,
+ "shrink": 20.0,
+ "top_k": 300,
+ "items": 3202,
+ "players": 23673,
+ "interactions": 296205,
+ "sim_nnz": 902348,
+ "cold_items": 92,
+ "head_n": 50
+}
