@@ -2,7 +2,7 @@
 Resolve opaque game codes to real titles.
 
 The stake export identifies most games by codes like `pop_9f571b7a_egtfeg`,
-carrying 83% of all stake and no title. The GA4 event logs carry real titles
+carrying the overwhelming majority of all stake and no title. The GA4 event logs carry real titles
 for ~900 games but cover only 91 players. Neither file has a join key.
 
 They can still be joined behaviourally. All 91 event-log players appear in the

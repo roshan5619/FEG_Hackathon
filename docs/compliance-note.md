@@ -197,7 +197,7 @@ no rotation, no MFA, and it is not proposed as production authentication.
 
 **Committed:** `artifacts/catalog.json` (game codes and parsed names),
 `interactions.npz` (the sparse matrix, keyed by pre-hashed ids), `model.npz`
-(item-item similarities), and the evaluation outputs. 3.4 MB total.
+(item-item similarities), and the evaluation outputs. 18 MB total.
 
 **Not committed, and gitignored:** every FEG source file (`*.csv`, `*.xlsx`),
 the supplied video, and any `.env`.

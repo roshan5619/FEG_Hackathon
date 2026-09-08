@@ -149,7 +149,7 @@ sufficient to start, which is why neither is on the critical path.
 |---|---|---|
 | `CA_Player` warehouse table (or its source) | daily batch | exists — this is the export we were given |
 | Player responsible-play flags | the hard gates | **required** — self-exclusion, exclusion-register hit, age verification, deposit-limit state |
-| **Game catalogue: code → title, category, thumbnail** | showing games | **the one real blocker.** 83% of stake is on games we cannot name; only 479 of 3,202 are recommendable without it |
+| **Game catalogue: code → title, category, thumbnail** | showing games | **the one real blocker.** 58% of stake is on games we cannot name; only 479 of 3,202 are recommendable without it |
 | Impression/click log | A/B measurement | needed before the experiment, not before shadow mode |
 
 The catalogue is a database export and it multiplies the addressable inventory
@@ -163,7 +163,7 @@ roughly ninefold. It is the highest-return thing anyone could hand this project.
 python -m src.cli status            # what is built, and what the ranker learned
 python -m src.cli explain <player>  # a full lobby with the model's reasoning
 python -m src.cli demo              # server + browser
-python -m pytest tests/ -q          # 37 tests
+python -m pytest tests/ -q          # 53 tests
 ```
 
 The contract tests that matter for an integrator:

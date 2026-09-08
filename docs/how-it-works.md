@@ -166,8 +166,10 @@ survives.
 
 ## 6. Two data problems solved on the way
 
-**The name bridge** (`src/pipeline/name_bridge.py`). 83% of stake sat on opaque
-codes like `pop_9f571b7a_egtfeg` that could never be shown to a player. All 91
+**The name bridge** (`src/pipeline/name_bridge.py`). The overwhelming majority
+of stake sat on opaque codes like `pop_9f571b7a_egtfeg` that could never be
+shown to a player; **58.4% still does**, and the codes this bridge resolved
+carry **37% of all stake** on their own. All 91
 event-log players also appear in the stake export, so co-occurrence on
 (player, day), constrained to matching providers, identifies which code is which
 game. It recovered **180 codes, 128 newly nameable**, taking the recommendable

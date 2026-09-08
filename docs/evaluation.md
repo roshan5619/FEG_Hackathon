@@ -173,8 +173,10 @@ reaches **732 games where popularity reaches 29**.
    them, and today that is a popularity row. Popularity therefore partly
    predicts its own success. This biases §2.1 *in favour of* `most_played` and
    is a further reason not to read that table as the whole story.
-4. **83% of stake is on unnameable games.** They train the model but can never
-   be *recommended*, so the recommendable catalogue is 479 of 3,202 (the name bridge recovered 128). The same
+4. **58.4% of stake is on unnameable games**, after the name bridge already
+   recovered 180 codes carrying 37% of all stake. They train the model
+   but can never be *recommended*, so the recommendable catalogue is 479 of
+   3,202 (the bridge contributed 128 of those). The same
    gap means **54% of players have no nameable game in their own history** —
    "Continue playing" therefore labels those by provider and kind
    ("Amusnet slot"), marked `named: false` and visibly dimmed, which lifts that

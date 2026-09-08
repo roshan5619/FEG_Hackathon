@@ -97,7 +97,7 @@ No code was copied from a tutorial, sample repository or Stack Overflow answer.
 
 Player identifiers arrive **pre-hashed** from FEG and are used only as opaque
 keys. **No name, email, document, balance, transaction or device attribute
-exists anywhere in this repository.** Total committed artifacts: 3.4 MB.
+exists anywhere in this repository.** Total committed artifacts: 18 MB.
 
 No third-party dataset, no scraped data, no purchased data, no public dataset
 is used anywhere in this project.
@@ -132,5 +132,5 @@ grep -rhoE "^[[:space:]]*(import|from) [a-z_]+" src/ --include=*.py | sort -u
 git status --porcelain | grep -E "\.(csv|xlsx|xls|parquet|mp4|mov)$"   # expect none
 
 # Confirm committed artifacts are small
-du -sh artifacts/                                                       # ~3.4 MB
+du -sh artifacts/                                                       # ~18 MB
 ```

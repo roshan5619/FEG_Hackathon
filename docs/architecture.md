@@ -137,8 +137,8 @@ matrix factorisation for three reasons in order of weight:
 3. **No training loop to get wrong.** One sparse product.
 
 **Trained wide, served narrow.** The similarity matrix covers all 3,202 games
-including the 2,625 opaque codes carrying 83% of stake — their co-occurrence is
-real signal. Only the 351 nameable games can ever be displayed. That filter is
+including the 2,724 opaque codes carrying 58% of stake — their co-occurrence is
+real signal. Only the 479 nameable games can ever be displayed. That filter is
 applied at serving time, never at training time.
 
 **Popularity correction α defaults to 0.0, and that is measured, not lazy.**

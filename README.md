@@ -6,7 +6,7 @@
 |---|---|
 | **Team** | Q'Makers |
 | **Challenge** | FEG Innovation Challenge 2026 — Croatian brand (PSK) track |
-| **Status** | Working prototype: trained ranker, decisioning API, personalised lobby, backend visualisations, 37 passing tests, full offline evaluation |
+| **Status** | Working prototype: trained ranker, decisioning API, personalised lobby, login journey, backend visualisations, 53 passing tests, full offline evaluation |
 
 ---
 
@@ -72,7 +72,7 @@ just explore badly, through a search box and one global row.
 
 ## 2. What we built, and the finding that shaped it
 
-A hybrid lobby. Five rows, each justified by a measured result rather than a
+A hybrid lobby. Six rows, each justified by a measured result rather than a
 guess — including one result that went against us.
 
 > **Collaborative filtering loses to "most played" on next-game prediction, and
@@ -85,7 +85,7 @@ guess — including one result that went against us.
 > next-week discovery is **0.79**, and one title takes **13%** of all discovery
 > plays on its own.
 
-That would be the end of it, except popularity can only ever reach 41 games.
+That would be the end of it, except popularity can only ever reach 32 games.
 So we asked the question that actually matters for a lobby — *what happens
 below the blockbusters?*
 
@@ -101,11 +101,12 @@ add what it structurally cannot do**. Full tables and method in
 
 | Row | Model | Why it exists |
 |---|---|---|
-| **Trending now** | `most_played` | Wins the head outright. This is *Najigranije* — we kept it |
-| **Continue playing** | `user_top` | NDCG 0.73 on repeat; labelled as the easy task it is. Serves **100%** of players |
+| **Nastavi igrati** | `user_top` | NDCG 0.73 on repeat; labelled as the easy task it is. Serves **100%** of players |
 | **Preporučeno za tebe** | **trained ranker** (sklearn LogisticRegression) | Explainable: every tile names the game that caused it |
 | **Otkrij nešto novo** | trained ranker, top-50 removed | The 4.28× result above |
-| **New releases** | cold items | 12.1% of discovery is on games with *zero* history — no CF can ever reach them |
+| **Jackpoti** | trained ranker, jackpot-eligible only | 136 titles, ordered by the same model rather than by prize size |
+| **Popularno** | `most_played` | Wins the head outright. This is *Najigranije* — we kept it unchanged |
+| **Nove igre** | cold items | 12.1% of discovery is on games with *zero* history — no CF can ever reach them |
 
 ---
 
@@ -119,7 +120,7 @@ add what it structurally cannot do**. Full tables and method in
   is never scored at all — the API returns zero rows, not a filtered list. At
   `MODERATE` risk every engagement row is withheld and only *Continue playing*
   survives. One chokepoint, covered by tests.
-- **Nothing unnameable is ever *recommended*.** 83% of stake sits on opaque
+- **Nothing unnameable is ever *recommended*.** 58% of stake sits on opaque
   game codes (`pop_9f571b7a_egtfeg`). They train the model — their
   co-occurrence is real signal — but they can never appear in a recommendation
   row, because a player has no way to know what they are being offered.
@@ -153,7 +154,7 @@ FEG's approved stack (from the supplied stack diagram) is **Vue.js** front-end,
 ## 5. System requirements
 
 - **Python 3.10+**, pip
-- ~200 MB disk (artifacts are 3.4 MB; the rest is the virtualenv)
+- ~250 MB disk (artifacts are 18 MB; the rest is the virtualenv)
 - No database, no broker, no external service, no API key
 
 Verified on Windows 11 with CPython 3.11.9.
@@ -257,7 +258,7 @@ svc.lobby(svc.players[1], player={"self_excluded": True})["rows"]   # []
 ## 9. How to test and validate
 
 ```bash
-python -m pytest tests/ -q          # expect: 37 passed
+python -m pytest tests/ -q          # expect: 53 passed
 ```
 
 The suite holds the claims in place rather than describing them:
@@ -310,7 +311,8 @@ training interactions.
 
 ### Data
 - **One month** (Aug 2026). No seasonality; the test window is 7 days.
-- **83% of stake is on unnameable games**, so the *recommendable* catalogue is
+- **58% of stake is on unnameable games** even after our name bridge recovered
+  180 codes carrying 37% of all stake, so the *recommendable* catalogue is
   479 of 3,202 and **54% of players have no nameable game in their history**. A
   game catalogue from FEG would remove this entirely — **the single
   highest-value thing we could be given.**
@@ -336,7 +338,7 @@ training interactions.
 ### Next
 1. Online A/B against *Najigranije*, measuring session length and breadth, not
    offline NDCG.
-2. Ask FEG for the game catalogue; unlock the other 83%.
+2. Ask FEG for the game catalogue; unlock the remaining 58%.
 3. Sequence-aware model for within-session next-game.
 4. Bandit exploration for cold items instead of a static "New releases" row.
 
@@ -366,7 +368,7 @@ and are used only as opaque keys.
 
 Committed: `artifacts/catalog.json` (game codes and names), `interactions.npz`
 (the sparse matrix, keyed by hashed ids), `model.npz`, and the evaluation
-outputs. 3.4 MB total.
+outputs. 18 MB total.
 
 ---
 
@@ -379,6 +381,5 @@ outputs. 3.4 MB total.
 | **Members** | `[TEAM TO ADD]` |
 | **Contact** | `[TEAM TO ADD]` |
 
-> ⚠️ Fill this in, plus the `[TEAM TO CONFIRM]` items in
-> [`docs/ai-use-disclosure.md`](docs/ai-use-disclosure.md) and the video link in
+> ⚠️ Fill this in, plus the video link in
 > [`demo/demo-video-link.md`](demo/demo-video-link.md), before submitting.

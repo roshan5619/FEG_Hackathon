@@ -13,7 +13,7 @@
 | Catalogue a player can actually be shown | **732 games**, against **29** from the popularity row — **25×** |
 | Ranking accuracy on the tail (NDCG@10, held-out week) | **0.0708** vs **0.0165** — **4.28×** |
 | Marginal cost per recommendation | ~**25 ms**, no GPU, 18 MB of artifacts |
-| Integration | five rows that replace existing psk.hr surfaces, each behind its own flag |
+| Integration | six rows added alongside existing psk.hr surfaces, each behind its own flag |
 
 **Refused: a revenue uplift number.** We looked for one. The data does not
 support it, and §3 shows the tests that failed. A claim that collapses under
@@ -31,7 +31,7 @@ one follow-up question is worth less than an honest gap.
 - That flow is currently served by **search** — the single most common route to
   a game in the event logs (3,580 launches, ahead of every browsable surface) —
   and by one global row, *Najigranije*, identical for all 23,673 players.
-- **The popularity row can only ever surface 29–41 games** of 3,202.
+- **The popularity row can only ever surface 29–32 games** of 3,202.
 
 So a seventh of all stake depends on discovery, and discovery is served by a
 search box and a list that never changes.
@@ -160,7 +160,7 @@ not the recommender.
 
 ### 5.3 The highest-return item is not engineering
 
-**A game catalogue from FEG: code → title, category, thumbnail.** 83% of stake
+**A game catalogue from FEG: code → title, category, thumbnail.** 58% of stake
 sits on games we cannot name, so only **479 of 3,202** can be recommended. Our
 name bridge recovered 128 of them from behavioural co-occurrence; a database
 export would recover the rest. **One file, ~9× the addressable inventory.**
