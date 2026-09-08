@@ -6,10 +6,16 @@ igre, Jackpoti) so this reads as a feature of that product rather than a
 separate dashboard. Two rows are new and are the point of the work:
 *Nastavi igrati* and *Preporuceno za tebe*.
 
-The model behind the personalised rows blends day-to-day sequence transitions
-with item-item collaborative filtering, weighted 3:1 in favour of sequence -
-the measured optimum. Sequence carries it: alone it scores 0.0624 NDCG@10 on
-tail discovery against 0.0462 for CF and 0.0205 for popularity.
+The personalised rows are ordered by a TRAINED ranker. Two stages: item-item
+collaborative filtering and a day-to-day sequence model generate ~200
+candidates, then a scikit-learn logistic regression - fitted with a loss
+function on labelled examples - reorders them. Measured on the held-out test
+week, tail discovery NDCG@10:
+
+    ranker 0.0708 | blend 0.0655 | sequence 0.0649 | CF 0.0490 | popularity 0.0165
+
+The ranker is 4.28x popularity. If it has not been trained, serving falls back
+to the blend rather than failing.
 
 Popularity is deliberately *not* in the blend but *is* still a row. It wins
 head prediction outright and cannot be improved on there; it simply cannot
@@ -107,9 +113,48 @@ class LobbyService:
         self.provider_of = [(self.catalog.get(c) or {}).get("provider") for c in self.items]
         self.pop_norm = self.pop / max(self.pop.max(), 1e-9)
 
+        # The trained ranker is optional: the lobby still works without it, and
+        # says so rather than silently degrading.
+        self.ranker = self._load_ranker()
+
+    def _load_ranker(self):
+        import os
+        from src.pipeline.build_dataset import ART
+        if not os.path.exists(os.path.join(ART, "ranker.pkl")):
+            return None
+        try:
+            from src.recsys.features import FeatureBuilder
+            from src.recsys.hybrid import SequenceRec
+            from src.recsys.item_item import ItemItemCF
+            from src.recsys.ranker import LearnedRanker
+
+            cf = ItemItemCF()
+            cf.sim_ = self.sim
+            seq = SequenceRec(self.seq, self.R)
+            seq.T_ = self.seq
+            fb = FeatureBuilder(self.X, self.catalog, self.items, self.R)
+            return LearnedRanker(cf, seq, fb).load(ART)
+        except Exception as exc:                       # pragma: no cover
+            print("ranker unavailable (%s); serving candidate models only" % exc)
+            return None
+
+    def explain(self, player_id: str, code: str):
+        """
+        Per-feature contribution behind one recommendation.
+
+        Returns None when the ranker is not built or the inputs are unknown -
+        the caller should say so rather than invent an explanation.
+        """
+        if self.ranker is None or player_id not in self.row_of:
+            return None
+        item = self.index_of.get(code)
+        if item is None:
+            return None
+        return self.ranker.explain(self.X, self.row_of[player_id], item)
+
     # -- scoring -----------------------------------------------------------
     def _blend(self, urow: int) -> np.ndarray:
-        """The hybrid score: each component max-normalised, then weighted."""
+        """The candidate-generation score: components max-normalised, then weighted."""
         def unit(v):
             mx = v.max()
             return v / mx if mx > 0 else v
@@ -120,6 +165,28 @@ class LobbyService:
         if self.w_pop:
             out = out + self.w_pop * self.pop_norm
         return out
+
+    def _score(self, urow: int) -> np.ndarray:
+        """
+        What actually orders the personalised rows.
+
+        The trained ranker when it is available - it measures best on tail
+        discovery (0.0708 NDCG@10 against 0.0655 for the blend and 0.0165 for
+        popularity). The blend is the fallback, so the lobby still works if the
+        ranker has not been trained.
+        """
+        if self.ranker is None:
+            return self._blend(urow)
+        try:
+            scores = self.ranker.scores(self.X, np.asarray([urow]))[0]
+        except Exception:                                   # pragma: no cover
+            return self._blend(urow)
+        # Candidates the ranker did not score keep a small blend-based score so
+        # a row can always be filled; ranked candidates always outrank them.
+        floor = self._blend(urow)
+        unscored = scores <= -1e29
+        scores = np.where(unscored, floor * 1e-6, scores + 1.0)
+        return scores.astype(np.float32)
 
     def _why(self, urow: int, item: int) -> str:
         """
@@ -223,7 +290,7 @@ class LobbyService:
         if known:
             urow = self.row_of[player_id]
             played = set(int(i) for i in self.X[urow].indices)
-            score = self._blend(urow)
+            score = self._score(urow)
             order = np.argsort(-score)
 
             recent = self.R[urow].toarray().ravel()

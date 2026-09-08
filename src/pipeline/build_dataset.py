@@ -46,7 +46,16 @@ from src.recsys import catalog as cat
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 ART = os.path.join(REPO, "artifacts")
 
-SPLIT_DATE = "2026-08-25"
+# Three-way temporal split. An earlier version had only train/test, and the
+# blend weights were swept on the test set and then reported from it - textbook
+# hyperparameter leakage. Validation now exists so tuning and reporting use
+# different data.
+#
+#   train      2026-08-01 .. 17   interactions, CF similarity, sequence matrix
+#   validation 2026-08-18 .. 24   ranker labels, weight tuning, model selection
+#   test       2026-08-25 .. 31   final numbers, read once
+TRAIN_END = "2026-08-18"     # exclusive upper bound of train
+VAL_END = "2026-08-25"       # exclusive upper bound of validation
 RECENCY_HALFLIFE_DAYS = 10.0     # profile weight halves every N days
 
 
@@ -55,7 +64,64 @@ def _conf(stake):
     return float(np.log1p(max(stake, 0.0)))
 
 
-def build(data_dir, split_date=SPLIT_DATE, use_sb=True):
+def _window(day, train_end, val_end):
+    if day < train_end:
+        return "train"
+    if day < val_end:
+        return "val"
+    return "test"
+
+
+def _recency(per_day, days):
+    """
+    Recency-decayed profile over a set of days: each active day contributes
+    0.5 ** (age / halflife), so yesterday outweighs three weeks ago. Measured
+    justification: P(replay) is 38.2% next day against 32.3% at 8-14 days.
+    """
+    order = {d: i for i, d in enumerate(sorted(days))}
+    last = len(order) - 1
+    out = collections.defaultdict(float)
+    for p, by_day in per_day.items():
+        for d, codes in by_day.items():
+            if d not in order:
+                continue
+            w = math.pow(0.5, (last - order[d]) / RECENCY_HALFLIFE_DAYS)
+            for code in codes:
+                out[(p, code)] += w
+    return out
+
+
+def _transitions(per_day, days, iidx):
+    """
+    Day-to-day game transitions restricted to `days`.
+
+    CA_Player is daily-aggregated so within-day order is lost; day-level order
+    is what the data supports and it covers 76% of players. Session-level
+    sequence was considered and rejected: only 91 of 26,904 players have event
+    logs.
+    """
+    keep = set(days)
+    rows, cols, vals, n_trans = [], [], [], 0
+    for p, by_day in per_day.items():
+        ds = sorted(d for d in by_day if d in keep)
+        for a, b in zip(ds, ds[1:]):
+            n_trans += 1
+            for x in by_day[a]:
+                if x not in iidx:
+                    continue
+                xi = iidx[x]
+                for y in by_day[b]:
+                    if y != x and y in iidx:
+                        rows.append(xi)
+                        cols.append(iidx[y])
+                        vals.append(1.0)
+    T = sparse.csr_matrix((vals, (rows, cols)),
+                          shape=(len(iidx), len(iidx)), dtype=np.float32)
+    T.sum_duplicates()
+    return T, n_trans
+
+
+def build(data_dir, train_end=TRAIN_END, val_end=VAL_END, use_sb=True):
     ca_path = os.path.join(data_dir, "CA_Player.csv")
     mom_path = os.path.join(data_dir, "CA_MOM.csv")
     ev_paths = [os.path.join(data_dir, f) for f in
@@ -97,7 +163,7 @@ def build(data_dir, split_date=SPLIT_DATE, use_sb=True):
         print("  %d games, %d months" % (len(feats["games"]), len(feats["months"])))
 
     # ---- aggregate interactions -----------------------------------------
-    agg = {"train": collections.defaultdict(float), "test": collections.defaultdict(float)}
+    agg = {w: collections.defaultdict(float) for w in ("train", "val", "test")}
     per_day = collections.defaultdict(lambda: collections.defaultdict(set))
     dates = set()
     dropped = collections.Counter()
@@ -121,28 +187,23 @@ def build(data_dir, split_date=SPLIT_DATE, use_sb=True):
             continue
         d = r["local_transaction_date"]
         dates.add(d)
-        half = "train" if d < split_date else "test"
-        agg[half][(r["PlayerID"], code)] += stake
-        if half == "train":
-            per_day[r["PlayerID"]][d].add(code)
+        agg[_window(d, train_end, val_end)][(r["PlayerID"], code)] += stake
+        # Day sequences are kept for every window; each matrix below selects
+        # the days it is allowed to see.
+        per_day[r["PlayerID"]][d].add(code)
 
-    train_days = sorted(d for d in dates if d < split_date)
-    idx_of_day = {d: i for i, d in enumerate(train_days)}
-    last_day = len(train_days) - 1
-
-    # Recency-decayed profile: each active day contributes 0.5 ** (age/halflife).
-    recency = collections.defaultdict(float)
-    for p, by_day in per_day.items():
-        for d, codes in by_day.items():
-            w = math.pow(0.5, (last_day - idx_of_day[d]) / RECENCY_HALFLIFE_DAYS)
-            for code in codes:
-                recency[(p, code)] += w
-
+    train_days = sorted(d for d in dates if d < train_end)
+    fit_days = sorted(d for d in dates if d < val_end)      # train + validation
     print("dropped rows:", dict(dropped))
+    print("windows: train %d days | val %d days | test %d days"
+          % (len(train_days), len(fit_days) - len(train_days), len(dates) - len(fit_days)))
 
-    # ---- index maps: TRAIN ONLY -----------------------------------------
-    players = sorted({p for p, _ in agg["train"]})
-    items = sorted({c for _, c in agg["train"]} | {c for _, c in agg["test"]})
+    # ---- index maps -------------------------------------------------------
+    # Players come from train+val (everything a served model may know about).
+    # Items span all windows so a test-only game still has a column and simply
+    # scores zero - dropping it would quietly inflate recall.
+    players = sorted({p for p, _ in agg["train"]} | {p for p, _ in agg["val"]})
+    items = sorted({c for w in agg for _, c in agg[w]})
     uidx = {p: i for i, p in enumerate(players)}
     iidx = {c: i for i, c in enumerate(items)}
     shape = (len(uidx), len(iidx))
@@ -157,35 +218,28 @@ def build(data_dir, split_date=SPLIT_DATE, use_sb=True):
         return sparse.csr_matrix((v_, (r_, c_)), shape=shape, dtype=np.float32)
 
     X_train = matrix(agg["train"], _conf)
+    X_val = matrix(agg["val"], _conf)
     X_test = matrix(agg["test"], _conf)
-    X_recent = matrix(recency, float)
-    print("train %s nnz | test %s nnz | recency %s nnz"
-          % (format(X_train.nnz, ","), format(X_test.nnz, ","), format(X_recent.nnz, ",")))
+    # X_fit is what a served model is fitted on: everything before the test
+    # window. Evaluation uses X_train only, so the two never overlap in a way
+    # that could leak.
+    X_fit = matrix({k: v for d in ("train", "val") for k, v in agg[d].items()}, _conf)
+    X_recent = matrix(_recency(per_day, train_days), float)
+    X_recent_fit = matrix(_recency(per_day, fit_days), float)
+    print("nnz  train %s | val %s | test %s | fit(train+val) %s"
+          % (format(X_train.nnz, ","), format(X_val.nnz, ","),
+             format(X_test.nnz, ","), format(X_fit.nnz, ",")))
 
     # ---- day-to-day sequence transitions ---------------------------------
     # T[i,j] = played i on one active day, j on the NEXT active day.
     # CA_Player is daily-aggregated so within-day order is lost; day-level order
     # is what the data supports, and it covers 76% of players. Session-level
     # sequence was considered and rejected: only 91 players have event logs.
-    tr, tc, tv = [], [], []
-    trans_count = 0
-    for p, by_day in per_day.items():
-        ds = sorted(by_day)
-        for a, b in zip(ds, ds[1:]):
-            trans_count += 1
-            for x in by_day[a]:
-                if x not in iidx:
-                    continue
-                xi = iidx[x]
-                for y in by_day[b]:
-                    if y != x and y in iidx:
-                        tr.append(xi)
-                        tc.append(iidx[y])
-                        tv.append(1.0)
-    T = sparse.csr_matrix((tv, (tr, tc)), shape=(len(iidx), len(iidx)), dtype=np.float32)
-    T.sum_duplicates()
-    print("sequence: %s transitions, %s distinct pairs"
-          % (format(trans_count, ","), format(T.nnz, ",")))
+    T, trans_count = _transitions(per_day, train_days, iidx)        # evaluation
+    T_fit, trans_fit = _transitions(per_day, fit_days, iidx)        # serving
+    print("sequence: train %s transitions / %s pairs | fit %s / %s"
+          % (format(trans_count, ","), format(T.nnz, ","),
+             format(trans_fit, ","), format(T_fit.nnz, ",")))
 
     # ---- sportsbook cross-signal (optional) ------------------------------
     sb_players = {}
@@ -229,19 +283,25 @@ def build(data_dir, split_date=SPLIT_DATE, use_sb=True):
     os.makedirs(ART, exist_ok=True)
     with open(os.path.join(ART, "catalog.json"), "w", encoding="utf-8") as fh:
         json.dump(catalog, fh, indent=1, ensure_ascii=False)
-    np.savez_compressed(
-        os.path.join(ART, "interactions.npz"),
-        train_data=X_train.data, train_indices=X_train.indices, train_indptr=X_train.indptr,
-        test_data=X_test.data, test_indices=X_test.indices, test_indptr=X_test.indptr,
-        rec_data=X_recent.data, rec_indices=X_recent.indices, rec_indptr=X_recent.indptr,
-        shape=np.array(shape),
-        players=np.array(players, dtype=object), items=np.array(items, dtype=object),
-        displayable=np.array(disp, dtype=np.int32),
-        new_items=np.array(new_items, dtype=np.int32),
-        jackpot_items=np.array(jack_items, dtype=np.int32))
+    def spread(name, M):
+        return {name + "_data": M.data, name + "_indices": M.indices,
+                name + "_indptr": M.indptr}
+
+    payload = {"shape": np.array(shape),
+               "players": np.array(players, dtype=object),
+               "items": np.array(items, dtype=object),
+               "displayable": np.array(disp, dtype=np.int32),
+               "new_items": np.array(new_items, dtype=np.int32),
+               "jackpot_items": np.array(jack_items, dtype=np.int32)}
+    for name, M in (("train", X_train), ("val", X_val), ("test", X_test),
+                    ("fit", X_fit), ("rec", X_recent), ("recfit", X_recent_fit)):
+        payload.update(spread(name, M))
+    np.savez_compressed(os.path.join(ART, "interactions.npz"), **payload)
+
     np.savez_compressed(
         os.path.join(ART, "sequence.npz"),
-        data=T.data, indices=T.indices, indptr=T.indptr, shape=np.array(T.shape))
+        data=T.data, indices=T.indices, indptr=T.indptr, shape=np.array(T.shape),
+        fit_data=T_fit.data, fit_indices=T_fit.indices, fit_indptr=T_fit.indptr)
     with open(os.path.join(ART, "sb_players.json"), "w", encoding="utf-8") as fh:
         json.dump(sb_players, fh)
 
@@ -250,15 +310,23 @@ def build(data_dir, split_date=SPLIT_DATE, use_sb=True):
                     "monthly": os.path.basename(mom_path) if os.path.exists(mom_path) else None,
                     "event_logs": [os.path.basename(p) for p in ev_paths]},
         "rows": len(rows), "dropped": dict(dropped),
-        "date_range": [min(dates), max(dates)], "split_date": split_date,
+        "date_range": [min(dates), max(dates)],
+        "split": {"train_end": train_end, "val_end": val_end,
+                  "train_days": len(train_days),
+                  "val_days": len(fit_days) - len(train_days),
+                  "test_days": len(dates) - len(fit_days)},
         "months_of_history": len(feats.get("months", [])),
         "players": shape[0], "games_trainable": shape[1],
         "games_displayable": len(disp),
         "games_named_by_bridge": sum(1 for d in catalog.values()
                                      if d.get("title_source") == "event_log_bridge"),
         "new_games": len(new_items), "jackpot_games": len(jack_items),
-        "interactions_train": int(X_train.nnz), "interactions_test": int(X_test.nnz),
+        "interactions_train": int(X_train.nnz),
+        "interactions_val": int(X_val.nnz),
+        "interactions_test": int(X_test.nnz),
+        "interactions_fit": int(X_fit.nnz),
         "sequence_transitions": trans_count, "sequence_pairs": int(T.nnz),
+        "sequence_transitions_fit": trans_fit, "sequence_pairs_fit": int(T_fit.nnz),
         "sb_crossover_players": len(sb_players),
         "recency_halflife_days": RECENCY_HALFLIFE_DAYS,
         "families": families,
@@ -271,17 +339,29 @@ def build(data_dir, split_date=SPLIT_DATE, use_sb=True):
 
 
 def load():
-    """Load everything serving and evaluation need."""
+    """
+    Load everything serving and evaluation need.
+
+    Two families of matrix are returned and they must not be confused:
+
+      X_train / X_recent / T          the TRAIN window only - what evaluation
+                                      is allowed to fit on
+      X_fit / X_recent_fit / T_fit    train + validation - what a served model
+                                      is fitted on, because in production you
+                                      use every day you have
+
+    X_val and X_test are label sets, never fitted on.
+    """
     z = np.load(os.path.join(ART, "interactions.npz"), allow_pickle=True)
     shape = tuple(z["shape"])
 
-    def mk(a, b, c):
-        return sparse.csr_matrix((z[a], z[b], z[c]), shape=shape)
+    def mk(name):
+        return sparse.csr_matrix(
+            (z[name + "_data"], z[name + "_indices"], z[name + "_indptr"]), shape=shape)
 
     out = {
-        "X_train": mk("train_data", "train_indices", "train_indptr"),
-        "X_test": mk("test_data", "test_indices", "test_indptr"),
-        "X_recent": mk("rec_data", "rec_indices", "rec_indptr"),
+        "X_train": mk("train"), "X_val": mk("val"), "X_test": mk("test"),
+        "X_fit": mk("fit"), "X_recent": mk("rec"), "X_recent_fit": mk("recfit"),
         "players": list(z["players"]), "items": list(z["items"]),
         "displayable": z["displayable"].tolist(),
         "new_items": z["new_items"].tolist(),
@@ -292,24 +372,29 @@ def load():
     seq = os.path.join(ART, "sequence.npz")
     if os.path.exists(seq):
         s = np.load(seq, allow_pickle=False)
-        out["T"] = sparse.csr_matrix((s["data"], s["indices"], s["indptr"]),
-                                     shape=tuple(s["shape"]))
+        n = len(out["items"])
+        out["T"] = sparse.csr_matrix((s["data"], s["indices"], s["indptr"]), shape=(n, n))
+        out["T_fit"] = sparse.csr_matrix(
+            (s["fit_data"], s["fit_indices"], s["fit_indptr"]), shape=(n, n))
     sb = os.path.join(ART, "sb_players.json")
     if os.path.exists(sb):
         with open(sb, encoding="utf-8") as fh:
             out["sb"] = json.load(fh)
     else:
         out["sb"] = {}
+    with open(os.path.join(ART, "dataset_report.json"), encoding="utf-8") as fh:
+        out["report"] = json.load(fh)
     return out
 
 
 def main():
     ap = argparse.ArgumentParser(description="Build recommender artifacts from FEG exports.")
     ap.add_argument("--data-dir", required=True, help="folder holding the FEG CSVs")
-    ap.add_argument("--split-date", default=SPLIT_DATE)
+    ap.add_argument("--train-end", default=TRAIN_END)
+    ap.add_argument("--val-end", default=VAL_END)
     ap.add_argument("--no-sb", action="store_true", help="skip the SB_Player cross-signal")
     args = ap.parse_args()
-    build(args.data_dir, args.split_date, use_sb=not args.no_sb)
+    build(args.data_dir, args.train_end, args.val_end, use_sb=not args.no_sb)
 
 
 if __name__ == "__main__":

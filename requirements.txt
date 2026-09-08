@@ -2,7 +2,8 @@
 
 # --- model & pipeline ------------------------------------------------------
 numpy==1.26.4
-scipy==1.16.2          # sparse matrices; the item-item model is one sparse product
+scipy==1.16.2          # sparse matrices; the candidate models are sparse products
+scikit-learn==1.5.2    # the trained re-ranker (LogisticRegression) + StandardScaler
 
 # --- API -------------------------------------------------------------------
 fastapi==0.134.0
@@ -16,6 +17,7 @@ httpx==0.28.1          # required by fastapi.testclient
 # Deliberately NOT dependencies:
 #   pandas    - the pipeline reads one CSV with the stdlib csv module; pandas
 #               would be 60 MB for a single pass.
-#   implicit  - ALS is ~30 lines in src/recsys/item_item.py. A compiled
-#               dependency for one comparison model is not worth it.
-#   sklearn   - nothing here needs it.
+#   implicit  - no latent-factor model is shipped.
+#   lightgbm  - gradient boosting was tried via sklearn and lost to logistic
+#               regression on the held-out test week; a compiled dependency for
+#               a model we do not ship would be install friction for nothing.

@@ -1,0 +1,68 @@
+{
+ "model": "logreg",
+ "n_rows": 199792,
+ "n_positives": 16176,
+ "positive_rate": 0.081,
+ "n_players": 4013,
+ "n_candidates": 200,
+ "negatives_per_positive": 12,
+ "train_accuracy": 0.6563,
+ "features": [
+  {
+   "name": "game_stake_pct",
+   "weight": 0.5517
+  },
+  {
+   "name": "player_n_games",
+   "weight": 0.3955
+  },
+  {
+   "name": "cf_score",
+   "weight": 0.3583
+  },
+  {
+   "name": "seq_score",
+   "weight": 0.2759
+  },
+  {
+   "name": "player_total_conf",
+   "weight": -0.2708
+  },
+  {
+   "name": "momentum",
+   "weight": 0.2557
+  },
+  {
+   "name": "pop_log",
+   "weight": -0.2242
+  },
+  {
+   "name": "type_affinity",
+   "weight": 0.1474
+  },
+  {
+   "name": "provider_recency",
+   "weight": 0.0982
+  },
+  {
+   "name": "has_jackpot",
+   "weight": 0.0901
+  },
+  {
+   "name": "age_months",
+   "weight": -0.0727
+  },
+  {
+   "name": "provider_affinity",
+   "weight": 0.0496
+  },
+  {
+   "name": "payout_ratio",
+   "weight": 0.0437
+  },
+  {
+   "name": "is_new",
+   "weight": -0.0323
+  }
+ ]
+}

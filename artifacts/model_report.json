@@ -1,27 +1,35 @@
 {
- "models": [
+ "fitted_on": "train (labels from validation)",
+ "candidate_models": [
   "item_item",
   "sequence"
  ],
  "blend": {
   "cf": 1.0,
-  "sequence": 3.0,
-  "popularity": 0.0
+  "sequence": 5.0,
+  "popularity": 0.0,
+  "tuned_on": "validation"
+ },
+ "ranker": {
+  "kind": "logreg",
+  "train_accuracy": 0.6563,
+  "n_rows": 199792,
+  "n_positives": 16176
  },
  "cf": {
   "alpha": 0.0,
   "shrink": 20.0,
   "top_k": 300,
-  "nnz": 902348
+  "nnz": 870334
  },
  "sequence": {
   "alpha": 0.0,
   "shrink": 5.0,
   "top_k": 200,
-  "nnz": 517623
+  "nnz": 460047
  },
  "players": 23673,
  "items": 3202,
- "interactions": 296205,
+ "interactions": 223531,
  "head_n": 50
 }

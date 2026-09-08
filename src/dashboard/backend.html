@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PSK Recommender — Backend</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Dark to match the lobby. Series colours are the validated categorical set
+   for a dark surface: blue #3987e5, orange #d95926, aqua #199e70, red #e66767. */
+:root{
+  color-scheme: dark;
+  --plane:#0a0e14; --surface:#141a1b; --raise:#1c242f; --sunk:#10151c;
+  --ink:#fff; --ink2:#b6c1d0; --muted:#7c8898;
+  --line:rgba(255,255,255,.10); --rule:#28313d; --grid:#222834;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#e66767; --gold:#e8b23a;
+  --sans:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+h1,h2,h3,p{margin:0}
+code{font-family:var(--mono);font-size:.86em;background:var(--raise);padding:1px 5px;border-radius:3px}
+a{color:var(--s1)}
+:focus-visible{outline:2px solid var(--s1);outline-offset:2px;border-radius:3px}
+
+.mast{background:var(--surface);border-bottom:1px solid var(--line)}
+.mast-in{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px;padding:16px 0}
+.mark{font-weight:800;font-size:18px;letter-spacing:-.02em}
+.mark span{color:var(--s1)}
+.sub{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.mast a.back{margin-left:auto;font-size:13px;text-decoration:none;background:var(--raise);
+  border:1px solid var(--rule);border-radius:5px;padding:6px 12px}
+
+section{padding:34px 0 0}
+.head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;
+  border-bottom:1px solid var(--rule);padding-bottom:9px;margin-bottom:18px}
+.head .n{font-family:var(--mono);font-size:12px;color:var(--s1);font-weight:600}
+.head h2{font-size:17px;font-weight:700;letter-spacing:-.015em}
+.head .note{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-left:auto}
+.prose{color:var(--ink2);font-size:13.5px;max-width:82ch;margin-bottom:16px}
+.prose strong{color:var(--ink);font-weight:600}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:20px 22px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}
+
+/* horizontal bar rows */
+.rows{display:grid;gap:4px;font-variant-numeric:tabular-nums}
+.row{display:grid;grid-template-columns:var(--lw,190px) minmax(0,1fr) 74px;
+  align-items:center;gap:11px;min-height:24px}
+.row .lab{font-family:var(--mono);font-size:11px;color:var(--ink2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .track{position:relative;height:14px;background:var(--sunk);border-radius:3px}
+.row .bar{position:absolute;top:0;height:14px;border-radius:3px;min-width:2px}
+.row .val{font-family:var(--mono);font-size:11px;font-weight:600;text-align:right}
+.row .val small{font-weight:400;color:var(--muted)}
+.zero{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--rule)}
+.axis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;
+  color:var(--muted);border-top:1px solid var(--grid);padding-top:6px;margin-top:6px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--ink2);margin-bottom:12px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+/* funnel */
+.funnel{display:flex;flex-direction:column;gap:7px}
+.fstep{display:grid;grid-template-columns:200px minmax(0,1fr) 104px;align-items:center;gap:12px}
+.fstep .lab{font-size:13px}
+.fstep .lab small{display:block;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.fstep .track{height:26px;background:var(--sunk);border-radius:4px;position:relative;overflow:hidden}
+.fstep .bar{height:26px;border-radius:4px;background:linear-gradient(90deg,var(--s1),#2a6bb8)}
+.fstep .val{font-family:var(--mono);font-size:12.5px;font-weight:600;text-align:right}
+
+/* controls */
+.ctl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:16px}
+select{background:var(--raise);color:var(--ink);border:1px solid var(--rule);border-radius:5px;
+  padding:7px 10px;font-size:12.5px;min-width:230px;font-family:inherit}
+.lbl{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+
+table{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 12px 7px 0;border-bottom:1px solid var(--grid)}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--muted);font-weight:500}
+td.n,th.n{text-align:right;padding-right:0}
+tr.win td{color:var(--ink);font-weight:600}
+.scroll{overflow-x:auto}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.kpi{background:var(--surface);padding:15px 16px;display:flex;flex-direction:column;gap:4px}
+.kpi .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-size:23px;font-weight:800;letter-spacing:-.025em;line-height:1}
+.kpi .v.acc{color:var(--s1)} .kpi .v.good{color:var(--s3)}
+.kpi .d{font-size:11.5px;color:var(--ink2)}
+.pill{display:inline-block;font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:3px;
+  border:1px solid currentColor}
+.pill.ok{color:var(--s3)} .pill.warn{color:var(--gold)}
+footer{padding:30px 0 50px;color:var(--muted);font-size:11.5px;max-width:90ch}
+.loading{color:var(--muted);font-family:var(--mono);font-size:12.5px;padding:20px 0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="mast"><div class="wrap"><div class="mast-in">
+  <div class="mark">PSK <span>Recommender</span> · Backend</div>
+  <div class="sub">what happens between a player id and a row of games</div>
+  <a class="back" href="/">← Lobi</a>
+</div></div></div>
+
+<div class="wrap">
+
+<section>
+  <div class="head"><span class="n">01</span><h2>The pipeline</h2>
+    <span class="note" id="src-note"></span></div>
+  <p class="prose">Every number here is read live from <code>/model</code> — nothing is hard-coded.
+  The funnel narrows from raw stake rows to the ten games a player actually sees.</p>
+  <div class="card"><div class="funnel" id="funnel"><div class="loading">loading…</div></div></div>
+  <div class="kpis" id="kpis" style="margin-top:14px"></div>
+</section>
+
+<section>
+  <div class="head"><span class="n">02</span><h2>What the model was trained on</h2>
+    <span class="note">three-way temporal split</span></div>
+  <p class="prose">An earlier version had only train/test and tuned the blend weights <strong>on the
+  test set</strong> — hyperparameter leakage. Validation now exists: weights and model choice are
+  selected on it, and the test window is read once. Features come from train, labels from
+  validation, and <strong>the test window is never seen during training.</strong></p>
+  <div class="card"><div class="rows" id="split" style="--lw:230px"></div></div>
+</section>
+
+<section>
+  <div class="head"><span class="n">03</span><h2>What the ranker learned</h2>
+    <span class="note" id="ranker-note"></span></div>
+  <p class="prose">This is the trained part. A <code>scikit-learn</code> logistic regression fitted
+  with a loss function on labelled examples: <em>did this player play this game in the validation
+  week?</em> Positive weight pushes a game up, negative pushes it down. These are the actual fitted
+  coefficients.</p>
+  <div class="legend">
+    <span><i style="background:var(--s1)"></i>increases the score</span>
+    <span><i style="background:var(--s4)"></i>decreases the score</span>
+  </div>
+  <div class="card"><div class="rows" id="weights" style="--lw:180px"></div></div>
+</section>
+
+<section>
+  <div class="head"><span class="n">04</span><h2>Why this game, for this player</h2>
+    <span class="note">exact attribution</span></div>
+  <p class="prose">Pick a player and one of their recommendations. The bars are
+  <strong>coefficient × standardised feature value</strong> — the literal decomposition of the
+  model's decision, summing to the logit. Not a story written afterwards.</p>
+  <div class="ctl">
+    <span class="lbl">Player</span><select id="player"></select>
+    <span class="lbl">Recommendation</span><select id="game"></select>
+  </div>
+  <div class="two">
+    <div class="card">
+      <div class="legend"><span id="prob"></span></div>
+      <div class="rows" id="attrib" style="--lw:170px"><div class="loading">loading…</div></div>
+    </div>
+    <div class="card">
+      <div class="legend"><span>What the model knows about this player</span></div>
+      <div class="rows" id="profile" style="--lw:190px"></div>
+      <div class="rows" id="provmix" style="--lw:190px;margin-top:14px"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head"><span class="n">05</span><h2>Model comparison</h2>
+    <span class="note">tail discovery · test window</span></div>
+  <p class="prose">Outside the global top 50, where <strong>76.5%</strong> of discovery happens.
+  This is the comparison that justifies personalising at all — popularity wins the head outright
+  and cannot be improved on there, but it only ever reaches ~37 games.</p>
+  <div class="card scroll"><table id="cmp"><thead><tr>
+    <th>Model</th><th class="n">NDCG@10</th><th class="n">Recall@10</th>
+    <th class="n">Coverage</th><th class="n">Novelty</th><th>vs popularity</th>
+  </tr></thead><tbody></tbody></table></div>
+</section>
+
+<footer>
+  Anonymised FEG sample · player identifiers arrive pre-hashed · no personal data.
+  Payout ratio is used as a similarity feature only — never to rank games and never shown to a
+  player. Full method: <code>docs/evaluation.md</code> and <code>docs/how-it-works.md</code>.
+</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s){return document.querySelector(s);};
+  function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+  function n(v){return (v==null?0:v).toLocaleString("en-US");}
+
+  // One bar row. `signed` draws from a centre zero line for +/- values.
+  function bar(host,label,value,max,color,text,signed){
+    var r=el("div","row");
+    r.appendChild(el("div","lab",esc(label)));
+    var tr=el("div","track"),b=el("div","bar");
+    if(signed){
+      var half=max||1, mid=50;
+      var w=Math.min(Math.abs(value)/half*50,50);
+      b.style.width=w+"%";
+      if(value>=0){b.style.left=mid+"%";}else{b.style.left=(mid-w)+"%";}
+      var z=el("div","zero"); z.style.left=mid+"%"; tr.appendChild(z);
+    }else{
+      b.style.left="0"; b.style.width=Math.max(1,Math.min(value/(max||1)*100,100))+"%";
+    }
+    b.style.background=color; tr.appendChild(b);
+    r.appendChild(tr);
+    r.appendChild(el("div","val",text));
+    host.appendChild(r);
+  }
+
+  var MODEL=null, PLAYERS=[];
+
+  fetch("/model").then(function(r){return r.json();}).then(function(m){
+    MODEL=m;
+    var ds=m.dataset, md=m.model, rk=m.ranker||{};
+    $("#src-note").textContent = (ds.sources&&ds.sources.stake||"") + " · " +
+      ds.date_range[0] + " → " + ds.date_range[1];
+    $("#ranker-note").textContent = (rk.model||"?") + " · " + n(rk.n_rows) + " training rows · " +
+      n(rk.n_positives) + " positives";
+
+    // 01 funnel
+    var f=$("#funnel"); f.textContent="";
+    var steps=[
+      ["Stake rows read", ds.rows, "CA_Player.csv"],
+      ["Interactions kept", ds.interactions_fit, "after dropping refunds, zero stakes, accounting rows"],
+      ["Games in the catalogue", ds.games_trainable, "all train the model"],
+      ["Games that can be shown", ds.games_displayable, "have a real title — " + ds.games_named_by_bridge + " recovered by the name bridge"],
+      ["Candidates per player", md.ranker?200:200, "generated by CF + sequence"],
+      ["Shown in a row", 10, "after the trained ranker reorders them"]
+    ];
+    var mx=Math.max.apply(null,steps.map(function(s){return s[1];}));
+    steps.forEach(function(s){
+      var d=el("div","fstep");
+      d.appendChild(el("div","lab",esc(s[0])+"<small>"+esc(s[2])+"</small>"));
+      var t=el("div","track"),b=el("div","bar");
+      b.style.width=Math.max(0.6,Math.sqrt(s[1]/mx)*100)+"%"; t.appendChild(b);
+      d.appendChild(t); d.appendChild(el("div","val",n(s[1])));
+      f.appendChild(d);
+    });
+
+    // KPIs
+    var k=$("#kpis"); k.textContent="";
+    [["Players",n(ds.players),"acc",""],
+     ["Months of history",n(ds.months_of_history),"","for game age and momentum"],
+     ["Named by bridge",n(ds.games_named_by_bridge),"good","previously unshowable"],
+     ["Day transitions",n(ds.sequence_transitions_fit),"","feed the sequence model"],
+     ["Also bet sport",n(ds.sb_crossover_players),"","cross-domain signal"],
+     ["Ranker accuracy",(rk.train_accuracy!=null?rk.train_accuracy:"—"),"","on training rows"]
+    ].forEach(function(x){
+      var d=el("div","kpi");
+      d.appendChild(el("div","k",x[0]));
+      d.appendChild(el("div","v "+(x[2]||""),x[1]));
+      d.appendChild(el("div","d",x[3]));
+      k.appendChild(d);
+    });
+
+    // 02 split
+    var sp=$("#split"); sp.textContent="";
+    var s=ds.split||{}, tot=(s.train_days||0)+(s.val_days||0)+(s.test_days||0);
+    [["Train — features, CF, sequence",s.train_days,"var(--s1)"],
+     ["Validation — ranker labels, tuning",s.val_days,"var(--s3)"],
+     ["Test — read once, never fitted",s.test_days,"var(--s2)"]
+    ].forEach(function(x){ bar(sp,x[0],x[1],tot,x[2],x[1]+" <small>days</small>"); });
+    bar(sp,"Interactions: train",ds.interactions_train,ds.interactions_fit,"var(--s1)",n(ds.interactions_train));
+    bar(sp,"Interactions: validation",ds.interactions_val,ds.interactions_fit,"var(--s3)",n(ds.interactions_val));
+    bar(sp,"Interactions: test",ds.interactions_test,ds.interactions_fit,"var(--s2)",n(ds.interactions_test));
+
+    // 03 learned weights
+    var w=$("#weights"); w.textContent="";
+    var feats=(rk.features||[]);
+    var wmax=Math.max.apply(null,feats.map(function(f){return Math.abs(f.weight);}))||1;
+    feats.forEach(function(f){
+      bar(w,f.name,f.weight,wmax,f.weight>=0?"var(--s1)":"var(--s4)",
+          (f.weight>=0?"+":"")+f.weight.toFixed(3),true);
+    });
+
+    // 05 comparison
+    renderCompare(m.evaluation);
+  });
+
+  function renderCompare(ev){
+    var tb=document.querySelector("#cmp tbody"); tb.textContent="";
+    if(!ev||!ev.results){ tb.appendChild(el("tr",null,
+      "<td colspan=6>Run <code>python -m src.cli evaluate</code> to populate this.</td>")); return; }
+    var res=ev.results, base=(res.most_played&&res.most_played.tail_discovery||{})["ndcg@10"]||0;
+    Object.keys(res).map(function(k){return [k,res[k].tail_discovery||{}];})
+      .filter(function(p){return p[1]["ndcg@10"]!=null;})
+      .sort(function(a,b){return b[1]["ndcg@10"]-a[1]["ndcg@10"];})
+      .forEach(function(p,i){
+        var r=p[1], tr=el("tr",i===0?"win":"");
+        tr.innerHTML="<td>"+esc(p[0])+"</td><td class=n>"+r["ndcg@10"].toFixed(4)+
+          "</td><td class=n>"+r["recall@10"].toFixed(4)+"</td><td class=n>"+n(r["coverage@10"])+
+          "</td><td class=n>"+r["novelty@10"].toFixed(3)+"</td><td>"+
+          (base?("<span class='pill "+(r["ndcg@10"]>=base?"ok":"warn")+"'>"+
+            (r["ndcg@10"]/base).toFixed(2)+"x</span>"):"—")+"</td>";
+        tb.appendChild(tr);
+      });
+  }
+
+  // ---- 04 attribution -------------------------------------------------
+  fetch("/players?limit=14").then(function(r){return r.json();}).then(function(d){
+    PLAYERS=d.players||[];
+    var sel=$("#player");
+    PLAYERS.forEach(function(p,i){
+      var o=el("option",null,"Player "+String(i+1).padStart(2,"0")+" · "+p.named_games+" named games");
+      o.value=p.player_id; sel.appendChild(o);
+    });
+    sel.addEventListener("change",loadPlayer);
+    if(PLAYERS.length) loadPlayer();
+  });
+
+  function loadPlayer(){
+    var pid=$("#player").value;
+    fetch("/recommendations/"+encodeURIComponent(pid)).then(function(r){return r.json();})
+      .then(function(j){
+        var g=$("#game"); g.textContent="";
+        (j.rows||[]).filter(function(r){return r.personalised && r.key!=="continue";})
+          .forEach(function(r){ r.tiles.slice(0,6).forEach(function(t){
+            var o=el("option",null,t.title+"  ("+r.title+")"); o.value=t.code; g.appendChild(o); }); });
+        g.onchange=loadAttrib;
+        loadAttrib();
+      });
+    fetch("/profile/"+encodeURIComponent(pid)).then(function(r){return r.json();}).then(function(p){
+      var host=$("#profile"); host.textContent="";
+      host.appendChild(el("div","lab","Most recent games (recency-weighted)"));
+      var mx=Math.max.apply(null,p.top_games.map(function(x){return x.recency_weight;}))||1;
+      p.top_games.slice(0,6).forEach(function(x){
+        bar(host, x.title || ("(untitled · "+(x.provider||"?")+")"),
+            x.recency_weight, mx, x.named?"var(--s1)":"var(--muted)",
+            x.recency_weight.toFixed(2));
+      });
+      var pm=$("#provmix"); pm.textContent="";
+      pm.appendChild(el("div","lab","Provider mix"));
+      p.providers.slice(0,5).forEach(function(x){
+        bar(pm,x.provider,x.share,1,"var(--s3)",(x.share*100).toFixed(0)+"%");
+      });
+    });
+  }
+
+  function loadAttrib(){
+    var pid=$("#player").value, code=$("#game").value;
+    if(!pid||!code) return;
+    var host=$("#attrib"); host.innerHTML='<div class="loading">loading…</div>';
+    fetch("/explain/"+encodeURIComponent(pid)+"/"+encodeURIComponent(code))
+      .then(function(r){ if(!r.ok) throw new Error("no explanation"); return r.json(); })
+      .then(function(e){
+        $("#prob").innerHTML="predicted probability <b>"+e.probability.toFixed(4)+"</b> · "+
+          (e.exact?"<span class='pill ok'>exact attribution</span>"
+                  :"<span class='pill warn'>indicative</span>");
+        host.textContent="";
+        var mx=Math.max.apply(null,e.features.map(function(f){return Math.abs(f.contribution);}))||1;
+        e.features.forEach(function(f){
+          bar(host,f.name,f.contribution,mx,f.contribution>=0?"var(--s1)":"var(--s4)",
+              (f.contribution>=0?"+":"")+f.contribution.toFixed(3),true);
+        });
+        var ax=el("div","axis"); ax.innerHTML="<span>pushes down</span><span>0</span><span>pushes up</span>";
+        host.appendChild(ax);
+      })
+      .catch(function(){
+        host.innerHTML='<div class="loading">No explanation — train the ranker with '+
+          '<code>python -m src.cli train</code>.</div>';
+        $("#prob").textContent="";
+      });
+  }
+})();
+</script>
+</body>
+</html>

@@ -179,8 +179,26 @@ def run(displayable_only: bool = False):
         B.RandomRec(), B.MostPlayed(), B.MostStaked(),
         B.UserTop(), B.ProviderPopular(item_prov),
         cf, seq,
-        HybridRec(cf, seq, w_cf=1.0, w_seq=3.0, w_pop=0.0),
+        # Blend weights were swept on VALIDATION, never on test.
+        HybridRec(cf, seq, w_cf=1.0, w_seq=5.0, w_pop=0.0),
     ]
+
+    # The trained ranker. Fitted here on train features + validation labels so
+    # the evaluation reproduces from scratch; the served model is refitted on
+    # train+validation by src.recsys.train.
+    try:
+        from src.recsys.features import FeatureBuilder
+        from src.recsys.ranker import LearnedRanker
+
+        cf.fit(X_train)
+        seq.fit(X_train)
+        fb = FeatureBuilder(X_train, d["catalog"], d["items"], d["X_recent"])
+        ranker = LearnedRanker(cf, seq, fb, model_kind="logreg")
+        print("  training the supervised ranker ...")
+        ranker.fit_supervised(X_train, d["X_val"])
+        models.append(ranker)
+    except Exception as exc:                       # pragma: no cover
+        print("  ranker skipped (%s)" % exc)
 
     results = {}
     for m in models:

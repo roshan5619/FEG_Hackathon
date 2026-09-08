@@ -29,6 +29,7 @@ from src.recsys.serve import LobbyService
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 DASHBOARD = os.path.join(REPO, "src", "dashboard", "index.html")
+BACKEND = os.path.join(REPO, "src", "dashboard", "backend.html")
 
 app = FastAPI(
     title="PSK Game Recommender",
@@ -140,6 +141,84 @@ def recommendations(
 def evaluation() -> Dict[str, Any]:
     """The measured results the widget design is based on."""
     return _read("eval_full.json")
+
+
+@app.get("/explain/{player_id}/{code:path}")
+def explain(player_id: str, code: str) -> Dict[str, Any]:
+    """
+    Why the trained ranker scored this game for this player.
+
+    Returns the feature vector and each feature's contribution. For logistic
+    regression the contributions are exact (coefficient x standardised value,
+    summing to the logit); the response says so via `exact`.
+    """
+    out = service().explain(player_id, code)
+    if out is None:
+        raise HTTPException(
+            404, "no explanation available - unknown player/game, or the "
+                 "ranker has not been trained (run: python -m src.cli train)")
+    g = service().catalog.get(code) or {}
+    out["game"] = {"code": code, "title": g.get("title"), "provider": g.get("provider")}
+    return out
+
+
+@app.get("/model")
+def model_report() -> Dict[str, Any]:
+    """What was fitted, and what the ranker learned. Feeds /backend."""
+    out = {"model": _read("model_report.json"), "dataset": _read("dataset_report.json")}
+    path = os.path.join(ART, "ranker_report.json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as fh:
+            out["ranker"] = json.load(fh)
+    path = os.path.join(ART, "eval_full.json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as fh:
+            out["evaluation"] = json.load(fh)
+    return out
+
+
+@app.get("/profile/{player_id}")
+def profile(player_id: str, top: int = Query(12, ge=1, le=50)) -> Dict[str, Any]:
+    """What the model actually knows about one player. Feeds /backend."""
+    import numpy as np
+    svc = service()
+    if player_id not in svc.row_of:
+        raise HTTPException(404, "unknown player")
+    u = svc.row_of[player_id]
+    rec = svc.R[u].toarray().ravel()
+    hist = svc.X[u].toarray().ravel()
+    order = np.argsort(-rec)[:top]
+    games, providers = [], {}
+    for i in order:
+        if rec[i] <= 0:
+            continue
+        code = svc.items[int(i)]
+        g = svc.catalog.get(code) or {}
+        games.append({"code": code, "title": g.get("title"),
+                      "provider": g.get("provider"), "named": bool(g.get("displayable")),
+                      "recency_weight": round(float(rec[i]), 4),
+                      "confidence": round(float(hist[i]), 4)})
+        p = g.get("provider") or "?"
+        providers[p] = providers.get(p, 0.0) + float(hist[i])
+    total = sum(providers.values()) or 1.0
+    return {
+        "player_id": player_id,
+        "n_games": int(svc.X[u].nnz),
+        "also_bets_sport": svc.sb.get(player_id),
+        "top_games": games,
+        "providers": sorted(({"provider": k, "share": round(v / total, 4)}
+                             for k, v in providers.items()),
+                            key=lambda d: -d["share"])[:8],
+    }
+
+
+@app.get("/backend", include_in_schema=False)
+def backend_view():
+    """The visualisations: pipeline, learned weights, per-tile attribution."""
+    if os.path.exists(BACKEND):
+        return FileResponse(BACKEND, media_type="text/html")
+    return JSONResponse({"detail": "backend view not built", "try": "/model"},
+                        status_code=404)
 
 
 @app.get("/", include_in_schema=False)

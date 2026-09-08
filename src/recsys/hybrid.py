@@ -75,8 +75,9 @@ class HybridRec(Recommender):
 
     Each component is max-normalised per user before blending, so a weight means
     the same thing regardless of the raw scale a component happens to produce.
-    Weights are swept on the validation split rather than chosen by taste, and
-    `contributions()` reports what each part is actually doing.
+    Weights are swept on the validation window - which now exists. An earlier
+    version of this file claimed that while only train/test splits existed and
+    the sweep actually ran on test.
     """
 
     name = "hybrid"

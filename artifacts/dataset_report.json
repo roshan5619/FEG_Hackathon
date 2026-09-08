@@ -17,7 +17,13 @@
   "2026-08-01",
   "2026-08-31"
  ],
- "split_date": "2026-08-25",
+ "split": {
+  "train_end": "2026-08-18",
+  "val_end": "2026-08-25",
+  "train_days": 17,
+  "val_days": 7,
+  "test_days": 7
+ },
  "months_of_history": 12,
  "players": 23673,
  "games_trainable": 3202,
@@ -25,10 +31,14 @@
  "games_named_by_bridge": 180,
  "new_games": 275,
  "jackpot_games": 136,
- "interactions_train": 296205,
+ "interactions_train": 223531,
+ "interactions_val": 115086,
  "interactions_test": 99930,
- "sequence_transitions": 114898,
- "sequence_pairs": 1421509,
+ "interactions_fit": 296205,
+ "sequence_transitions": 75764,
+ "sequence_pairs": 1046819,
+ "sequence_transitions_fit": 114898,
+ "sequence_pairs_fit": 1421509,
  "sb_crossover_players": 7898,
  "recency_halflife_days": 10.0,
  "families": {
