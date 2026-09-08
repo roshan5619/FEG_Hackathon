@@ -4,154 +4,211 @@
 
 ---
 
-## 0. Summary
+## 0. What we claim, and what we refuse to claim
 
-The lobby is static: 26,904 players see the same *Najigranije* row. We built a
-hybrid personalised lobby and measured it against that incumbent rather than
-against a straw man.
-
-The result was not the one we wanted, and the honest version is the one that
-makes the case:
-
-- On **next-game prediction**, global popularity beats collaborative filtering
-  outright — NDCG@10 **0.305** vs **0.056**. We do not claim otherwise, and we
-  kept the popularity row because of it.
-- On the **tail** — where **76.5%** of all discovery plays happen — CF beats
-  popularity **2.25×** on NDCG@10 with **18×** the catalogue coverage: **680
-  games against 37**.
-
-The value proposition is therefore *not* "better predictions". It is
-**catalogue reach**: 680 games become discoverable where 37 were before, for
-the 3,000-game majority of the library that popularity can never surface.
-
----
-
-## 1. The addressable problem, counted
+**Claimed, and measured on FEG's own data:**
 
 | | |
 |---|---|
-| Players in the training window | **23,673** |
-| Games in the catalogue | **3,202** |
-| Games the popularity row can ever surface (top-10 @ k=10) | **41** |
-| Share of the catalogue currently reachable by the lobby's main row | **1.3%** |
-| Discovery plays occurring outside the global top-50 | **76.5%** |
-| Most common route to a game today | **search** (3,580 launches — ahead of every browsable surface) |
-| Games with zero play history (unreachable by any CF) | **92** (12.1% of discovery) |
+| Catalogue a player can actually be shown | **732 games**, against **29** from the popularity row — **25×** |
+| Ranking accuracy on the tail (NDCG@10, held-out week) | **0.0708** vs **0.0165** — **4.28×** |
+| Marginal cost per recommendation | ~**25 ms**, no GPU, 18 MB of artifacts |
+| Integration | five rows that replace existing psk.hr surfaces, each behind its own flag |
 
-**Search being the top route is the problem statement in one number.** If a
-player has to type a game's name, the lobby did not surface it.
+**Refused: a revenue uplift number.** We looked for one. The data does not
+support it, and §3 shows the tests that failed. A claim that collapses under
+one follow-up question is worth less than an honest gap.
 
 ---
 
-## 2. What the recommender changes
+## 1. The problem, in money
 
-Measured, not modelled:
+`CA_Player.csv`, August 2026, 23,673 players × 3,202 games.
 
-| Metric | Popularity row (today) | Item-item CF | Change |
+- **€19.6M of stake — 13.7% of the entire window — sits on games a player was
+  playing for the first time.** 138,041 first-time adoptions in 14 days, median
+  **€16.16** each.
+- That flow is currently served by **search** — the single most common route to
+  a game in the event logs (3,580 launches, ahead of every browsable surface) —
+  and by one global row, *Najigranije*, identical for all 23,673 players.
+- **The popularity row can only ever surface 29–41 games** of 3,202.
+
+So a seventh of all stake depends on discovery, and discovery is served by a
+search box and a list that never changes.
+
+**Tail games are not the cheap end.** Median stake on a newly-adopted tail game
+is **€17.00**, against **€10.50** on a top-50 game. (Head games have a higher
+*mean*, €157 vs €102 — blockbusters carry the whales.) The long tail is worth
+defending on its own economics.
+
+---
+
+## 2. What the recommender demonstrably changes
+
+Held-out test week, tail discovery — outside the global top 50, where **76.5%**
+of all discovery happens:
+
+| Model | NDCG@10 | Games reachable | vs popularity |
 |---|---|---|---|
-| Distinct games recommended (tail, @10) | 37 | **680** | **18.4×** |
-| NDCG@10 (tail discovery) | 0.0205 | **0.0462** | **2.25×** |
-| Novelty (mean unpopularity) | 0.017 | 0.033 | 1.9× |
-| Recall@10 (tail discovery) | 0.0280 | **0.0581** | 2.08× |
+| **Trained ranker** | **0.0708** | **732** | **4.28×** |
+| Blend (sequence + CF) | 0.0655 | 773 | 3.96× |
+| Sequence only | 0.0649 | 887 | 3.92× |
+| Item-item CF | 0.0490 | 731 | 2.96× |
+| `most_played` (live today) | 0.0165 | 29 | 1.00× |
 
-Cohort: 6,323 players with ≥3 games of history and a new tail game in the
-held-out week.
+On **overall** discovery, popularity still wins outright (0.305 vs 0.056 for
+CF). We kept it unchanged as the *Popularno* row for exactly that reason. The
+recommender is additive: it reaches the 3,000 games popularity structurally
+cannot.
 
 ---
 
-## 3. Value model
+## 3. The claims we tested and could not make
 
-### 3.1 Why there is no euro figure here
+We tried to establish that broader discovery drives value. Three tests, three
+negative results. All are reproducible from `CA_Player.csv`.
 
-`CA_Player.csv` contains stake, but attributing incremental revenue to a lobby
-row requires knowing what a player *would* have done otherwise — which needs an
-online experiment, not a held-out week. **Inventing a revenue number from this
-data would be exactly the borrowed-benchmark problem we set out to avoid.**
+### 3.1 Breadth correlates with value — but it is confounded
 
-So the value is expressed in the quantity we can actually measure, and the
-conversion to revenue is left to FEG, who have the ARPU we do not.
+| Distinct games | Players | Median stake | Median active days |
+|---|---|---|---|
+| 1–2 | 8,681 | €16 | 1 |
+| 3–5 | 5,728 | €137 | 3 |
+| 6–10 | 4,413 | €685 | 5 |
+| 11–25 | 4,597 | €1,924 | 8 |
+| 26+ | 3,433 | €5,446 | 16 |
 
-### 3.2 The mechanism, stated as a falsifiable claim
+A 334× spread. Tempting, and unusable: active players play more games almost by
+definition. The correlation is real; the causal direction is not established.
 
-> A player shown 680 candidate games instead of 37 will find more games worth
-> playing, and a player who finds more games worth playing stays longer.
+### 3.2 Adoption does not improve retention once matched on activity
 
-The first half is measured (§2). **The second half is an assumption**, and it
-is the one an A/B test must check. We are not going to dress it up as a result.
+Of 12,743 players active in week 3 with prior history, 75% tried at least one
+new game. Raw retention into the held-out week 4 favoured them — 77.5% against
+74.0%. Matched on how active they already were, the effect disappears:
 
-### 3.3 Three scenarios
-
-Against a base of 23,673 monthly active players, expressed in *additional
-players finding at least one new game per month*:
-
-| | Assumption | Effect |
+| Week-3 days played | Adopters retained | Non-adopters retained |
 |---|---|---|
-| **Pessimistic** | Tail exposure changes nothing; players who wanted the head still pick the head | **0** — the popularity row still serves them, so nothing is lost either |
-| **Central** | The 2.08× tail recall improvement converts at a quarter of its offline rate | **~+1,900 players/month** find a new game they would not have found |
-| **Optimistic** | Tail recall converts at half its offline rate, plus the "New releases" row captures part of the 12.1% cold-item discovery | **~+4,400 players/month** |
+| 1 day | 56.8% | **57.6%** |
+| 2–3 days | 78.1% | 77.9% |
+| 4–7 days | 94.2% | **96.5%** |
 
-The pessimistic case is genuinely zero-loss, not a hedge: because the
-popularity row is retained unchanged, the downside of this design is bounded at
-the cost of screen space.
+### 3.3 Adoption is associated with *lower* subsequent stake
+
+Matched on week-3 stake band, median week-4 stake:
+
+| Week-3 stake | Adopters | Non-adopters |
+|---|---|---|
+| €50–200 | €34.65 | **€49.15** |
+| €200–1,000 | €155.35 | **€245.97** |
+| €1,000–5,000 | €855.51 | **€1,098.95** |
+
+Consistently lower. On this evidence, "personalised discovery grows revenue" is
+not a claim we can make.
 
 ---
 
-## 4. Cost
+## 4. The reframe — and it is a better story
 
-### 4.1 Build
+The obvious reading of §3.3 is that discovery destroys value. We think the
+opposite, and the mechanism is worth FEG's attention regardless of whether this
+prototype ships:
+
+> **Exploration currently correlates with lower value because exploration
+> currently fails.**
+
+A player hunting through a search box and a 41-game list is behaving like
+someone who has not found what they want. Exploration on psk.hr today is
+plausibly a **symptom of dissatisfaction, not a driver of it** — which is
+exactly what §3.3 would look like.
+
+That changes the product's job. It is not to make players try *more* games. It
+is to make the exploration they are **already doing** — 138,041 adoptions and
+€19.6M a fortnight — succeed faster and more often.
+
+This is a hypothesis. It is falsifiable, and §6 defines the experiment.
+
+---
+
+## 5. Cost
+
+### 5.1 Build
 
 | Workstream | Effort | Status |
 |---|---|---|
-| Pipeline, catalogue parser, temporal split | — | **done** |
-| Item-item model + offline evaluation harness | — | **done** |
-| Serving layer, API, responsible-play integration | — | **done** |
+| Pipeline, catalogue, name bridge, three-way split | — | **done** |
+| Candidate models (item-item CF, day-sequence) | — | **done** |
+| Trained re-ranker + evaluation harness | — | **done** |
+| Serving layer, API, CLI, responsible-play gates | — | **done** |
 | Vue 3 lobby components | 3–4 weeks | not built |
 | Kafka consumer + Redis player vectors | 2–3 weeks | not built |
 | A/B framework + impression logging | 2 weeks | not built |
-| Game catalogue integration (names, art, categories) | 1 week | **blocked on FEG** |
+| Game catalogue integration (titles, art) | 1 week | **blocked on FEG** |
 
-**Critical path ≈ 6–8 weeks** with 2 engineers. The model is finished and is
-not on it.
+**Critical path ≈ 6–8 weeks, 2 engineers.** The model is finished and not on it.
 
-### 4.2 Run
+### 5.2 Run — unusually cheap
 
-Cheap, and unusually so:
+- **Training:** sparse matrix products plus a logistic regression over ~200,000
+  rows. Seconds, daily, on one core. **No GPU, no cluster, no model API.**
+- **Serving:** **~25 ms** per lobby, zero I/O on the request path once the
+  18 MB of artifacts are in memory.
+- **No third-party ML service** and no per-inference cost.
 
-- **Training** is one sparse matrix product over 296,205 interactions —
-  seconds, daily, on a single core. No GPU, no cluster.
-- **Serving** is ~60 ms per lobby with zero I/O on the request path. The
-  artifacts are 3.4 MB and fit in memory many times over.
-- **No third-party ML service**, no per-inference cost, no model API.
-
-The dominant marginal cost is the impression log needed for A/B measurement,
+The dominant marginal cost is the impression log needed for A/B measurement —
 not the recommender.
 
-### 4.3 The highest-return item is not engineering
+### 5.3 The highest-return item is not engineering
 
-**A game catalogue — code → title, category, thumbnail — from FEG.** 83% of
-stake sits on games we cannot name, so the servable catalogue is 351 of 3,202.
-That single file would multiply the addressable inventory ~9×, and it costs
-FEG a database export rather than a sprint.
+**A game catalogue from FEG: code → title, category, thumbnail.** 83% of stake
+sits on games we cannot name, so only **479 of 3,202** can be recommended. Our
+name bridge recovered 128 of them from behavioural co-occurrence; a database
+export would recover the rest. **One file, ~9× the addressable inventory.**
 
 ---
 
-## 5. Risks
+## 6. The experiment that would settle it
+
+Because §3 is honest, the value case rests on a test, and the test is cheap.
+
+- **Design:** A/B on the lobby. Control = today's static rows. Treatment = the
+  five personalised rows. Randomise by player, run four weeks.
+- **Primary metric:** *successful* discovery — first-time game adoptions
+  **that are played again within 7 days**. This distinguishes "found something
+  good" from "tried and bounced", which §3.3 cannot.
+- **Secondary:** distinct games played, search-initiated launches (should
+  **fall** if the lobby is working), days active, stake per active day.
+- **Guardrail:** harmful-play indicator rate must not rise. Ship behind the
+  responsible-play gates from day one.
+- **What would falsify us:** if treatment shows no lift in repeat-played
+  adoptions and no fall in search-initiated launches, the Discover row is not
+  earning its screen space and should be cut.
+- **Cost:** shadow mode first — score and log everything, render nothing —
+  so the comparison starts before any player sees a change.
+
+---
+
+## 7. Risk register
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| Offline NDCG does not translate to engagement | **High** | The core untested assumption (§3.2). Shadow mode then A/B, measuring session length and breadth, not NDCG |
-| Exposure bias flatters the popularity baseline | Medium | Players choose from what PSK shows them today. This biases §2 *against* us, so the tail result is if anything understated |
-| One month of data; no seasonality | Medium | Retrain daily; revisit after a full quarter |
-| 83% of catalogue undisplayable | Medium | Ask FEG for the catalogue (§4.3) |
-| Personalisation increases play for at-risk players | **High** | Hard gates run before scoring; MODERATE+ withholds every engagement row. Tested, not asserted — `docs/compliance-note.md` |
+| Offline ranking accuracy does not translate to engagement | **High** | The core untested assumption. §6 is the test. Shadow mode makes waiting free. |
+| The §4 reframe is wrong and discovery genuinely destroys value | **High** | Then the A/B shows it and the row is cut. Bounded downside: *Popularno* is retained unchanged, so the worst case costs screen space, not revenue. |
+| Exposure bias flatters the popularity baseline | Medium | Players choose from what PSK shows them today. This biases §2 **against** the recommender, so the 4.28× is if anything understated. |
+| One month of data, no seasonality | Medium | 12 months exist in `CA_MOM.csv` for game-level features; player-level is one month. Retrain daily. |
+| 83% of catalogue unnameable | Medium | §5.3 — ask FEG for the catalogue. |
+| Personalisation increases play for at-risk players | **High** | Hard gates run **before** scoring; from `MODERATE` every engagement row is withheld. Tested, not asserted — `docs/compliance-note.md`. |
 
 ---
 
-## 6. What would change our mind
+## 8. Reproducing every figure
 
-- If tail exposure shows no lift in breadth of play under A/B, the Discover row
-  is not worth its screen space and should be cut.
-- If the head/tail split is unstable across months, the top-50 boundary is
-  arbitrary and the design needs rethinking.
-- If a sequence-aware model beats item-item substantially on the tail, the
-  neighbourhood approach should be replaced rather than tuned.
+```bash
+python -m src.cli build --data-dir <FEG csv folder>
+python -m src.cli evaluate
+```
+
+§2 comes from `artifacts/eval_full.json`. §1 and §3 are single passes over
+`CA_Player.csv`; the exact aggregations are described inline above and use no
+data other than `PlayerID`, `reporting_bet_type`, `local_transaction_date` and
+`total_stake_amt`.

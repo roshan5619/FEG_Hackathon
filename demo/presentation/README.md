@@ -25,7 +25,8 @@ If you rebuild the deck, these are the slides that matter:
 3. **The honest finding** — collaborative filtering *lost* to most-played on
    next-game prediction (0.056 vs 0.305), so we kept the popularity row
 4. **The result that justifies the build** — on the tail, where 76.5% of
-   discovery happens, CF wins 2.25× with 18× catalogue coverage
+   discovery happens, the trained ranker wins **4.28×** while reaching **732
+   games against 29**
 5. **Responsible play** — hard gates run before scoring; a self-excluded
    account is never scored, not filtered
 6. **Architecture** — additive middleware on FEG's stack (Vue / Python / Redis)

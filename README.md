@@ -46,8 +46,8 @@ That would be the end of it, except popularity can only ever reach 41 games.
 So we asked the question that actually matters for a lobby — *what happens
 below the blockbusters?*
 
-> **Remove the global top-50 and it reverses. Item-item CF beats popularity
-> 2.25× on NDCG@10 with 18× the catalogue coverage — 680 games against 37. And
+> **Remove the global top-50 and it reverses. A trained ranker beats popularity
+> 4.28× on NDCG@10 while reaching 732 games against 29 — 25× the catalogue. And
 > 76.5% of all discovery plays live in that tail.**
 
 So the product answer is not "replace the popularity row". It is **keep it, and
@@ -60,8 +60,8 @@ add what it structurally cannot do**. Full tables and method in
 |---|---|---|
 | **Trending now** | `most_played` | Wins the head outright. This is *Najigranije* — we kept it |
 | **Continue playing** | `user_top` | NDCG 0.73 on repeat; labelled as the easy task it is. Serves **100%** of players |
-| **Picked for you** | item-item CF | Explainable: every tile names the game that caused it |
-| **Discover something new** | item-item CF, top-50 removed | The 2.25× result above |
+| **Preporučeno za tebe** | **trained ranker** (sklearn LogisticRegression) | Explainable: every tile names the game that caused it |
+| **Otkrij nešto novo** | trained ranker, top-50 removed | The 4.28× result above |
 | **New releases** | cold items | 12.1% of discovery is on games with *zero* history — no CF can ever reach them |
 
 ---
@@ -279,6 +279,8 @@ training interactions.
 
 | Document | Contents |
 |---|---|
+| [`docs/how-it-works.md`](docs/how-it-works.md) | **Start here.** Every formula, the trained ranker, and both leaks we found and fixed |
+| [`docs/integration.md`](docs/integration.md) | How FEG ships this: the contract, where each row goes, sizing, rollout, what FEG must supply |
 | [`docs/evaluation.md`](docs/evaluation.md) | **Protocol, full results, the negative finding, and the limits** |
 | [`docs/architecture.md`](docs/architecture.md) | Components, data flow, FEG stack alignment, what is not built |
 | [`docs/impact-case.md`](docs/impact-case.md) | Value model built on measured coverage, not benchmarks |

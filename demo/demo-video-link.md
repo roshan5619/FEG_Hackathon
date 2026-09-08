@@ -45,13 +45,13 @@ the literal top contributor to that score, not a generated rationale.
 **2:00 — The honest part.** Go to `/evaluation`. Say it plainly:
 
 > On next-game prediction, collaborative filtering **lost** to most-played —
-> NDCG@10 0.056 against 0.305. We tuned it hard before accepting that. What
-> players try next is overwhelmingly what's already popular.
+> NDCG@10 0.056 against 0.305. What players try next is overwhelmingly what's
+> already popular.
 >
-> So we kept the popularity row. But it can only ever reach 41 games. Remove
-> the global top-50 and it reverses: **CF beats popularity 2.25× with 18× the
-> catalogue coverage — 680 games against 37 — and 76.5% of all discovery plays
-> live in that tail.**
+> So we kept the popularity row. But it can only ever reach 29 games. Remove
+> the global top-50 and it reverses: **our trained ranker beats popularity
+> 4.28× while reaching 732 games against 29 — and 76.5% of all discovery lives
+> in that tail.**
 
 **3:00 — Responsible play.** Toggle **Self-excluded**: the lobby goes to zero
 rows. Not filtered — never scored; the gate runs before the model. Then set

@@ -37,8 +37,10 @@ the way it is.
 |---|---|
 | No manipulative patterns | The lobby recommends games; it never nudges a stake. No countdown timers, no "X others are playing", no scarcity, no urgency copy anywhere in `src/recsys/serve.py` or the dashboard. |
 | Must not exploit vulnerability | Harmful-play indicators **invert** the objective rather than tuning it: from `MODERATE`, every engagement row is withheld and only *Continue playing* survives. `src/recsys/responsible.py`; single chokepoint in `serve.LobbyService.lobby()`. Tested by `test_moderate_risk_suppresses_engagement_rows`. |
-| Explainability | Every tile carries a `why` string that is the **literal top contributor** to its score — the decomposition, not a generated rationale. Where the source game has no name in the data the copy says so rather than inventing one. `src/recsys/serve.py::_why_because`. |
-| Human oversight | Ships in shadow mode: log recommendations against the live lobby without rendering them, and compare before switching traffic. Each row is independently feature-flagged. |
+| Explainability | Two levels, both exact. Every tile carries a `why` string naming the **literal top contributor** to its score. And `GET /explain/{player}/{game}` returns the full per-feature attribution from the trained ranker: contribution = coefficient x standardised value, which sum to the logit and reconstruct the model's probability — asserted by `test_explanation_is_exact_for_logistic_regression`. Logistic regression was chosen over gradient boosting partly *because* a boosted ensemble has no such exact decomposition. |
+| Human oversight | Ships in shadow mode: log recommendations against the live lobby without rendering them, and compare before switching traffic. Each row is independently feature-flagged; the responsible-play inversion is not. |
+| Data minimisation in the model | The ranker's 14 features are behavioural and game-level only — which games, which providers, how recently, how popular. **No demographic, financial, device or location attribute is used, and none is available to it.** `src/recsys/features.py` |
+| Payout ratio, used carefully | A per-game win/stake proxy is a *similarity* feature only. It never ranks games and is never shown to a player: advertising "this game pays more" is precisely the inducement the AI Act prohibits. |
 
 **Status note.** The Digital Omnibus AI strand entered into force 27 July 2026
 and defers the high-risk timeline by up to 16 months. The *prohibition* on

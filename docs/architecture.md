@@ -110,8 +110,22 @@ challenge brief, which rules out Velocity, PHP, C++, MS SQL and Ignite.
 
 ## 5. Model
 
-**Item-item collaborative filtering**, chosen over matrix factorisation for
-three reasons in order of weight:
+**Two stages.** Item-item collaborative filtering and a day-to-day sequence
+model generate ~200 candidates per player; a **trained scikit-learn logistic
+regression** re-ranks them. The ranker is the only component fitted with a loss
+function — the candidate models are closed-form counting, and `how-it-works.md`
+is explicit about that distinction.
+
+The ranker learns over 14 features spanning candidate scores, player-game
+affinity (provider, game type, recency) and game properties (popularity,
+release age, momentum, jackpot). On the held-out week it reaches 0.0708 NDCG@10
+on tail discovery against 0.0655 for the blend it re-ranks and 0.0165 for
+popularity. Logistic regression over gradient boosting was chosen before
+reading the test set, for exact attribution and because GBM was memorising
+(0.920 train accuracy against 0.656 on an 8.1%-positive problem).
+
+**Item-item collaborative filtering**, as the candidate generator, chosen over
+matrix factorisation for three reasons in order of weight:
 
 1. **Explainability.** Every score decomposes into "you played X, people who
    play X also play Y". The widgets need that sentence, and under the EU AI Act
@@ -185,6 +199,7 @@ Stated plainly, because a prototype that overclaims is worse than one that
 does not.
 
 - **No Vue SDK.** The dashboard is plain HTML; production would be Vue 3.
+  `docs/integration.md` specifies the component contract and sizing.
 - **No Kafka consumer, no Redis.** The pipeline is offline; the API reads files.
 - **No session/sequence model.** Recommendations are per player, not per
   session, so "what to play next *right now*" is not modelled.

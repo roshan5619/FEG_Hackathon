@@ -4,9 +4,15 @@
 
 > **Headline, stated up front because it is not the flattering version:
 > collaborative filtering loses to "most played" on next-game prediction, and
-> loses badly.** It wins decisively on the tail, which is where three quarters
-> of discovery actually happens. That split is the entire product argument, and
-> everything below is the evidence for it.
+> loses badly.** Personalisation wins decisively on the *tail*, which is where
+> three quarters of discovery actually happens. That split is the entire product
+> argument.
+>
+> **This document was rewritten after two leaks were found and fixed.** An
+> earlier version had only train/test splits and swept blend weights on the test
+> set; a later one trained the served ranker on test labels. Both are described
+> in §7. Every number below comes from a three-way split with the test window
+> read once.
 
 Reproduce with:
 
@@ -22,17 +28,18 @@ python -m src.recsys.evaluate
 **Data.** `CA_Player.csv` — 741,679 rows of daily per-player stake by game,
 brand `hr`, 2026-08-01 → 2026-08-31.
 
-**Split.** Temporal. Train 08-01→24, test 08-25→31. Never random: a random
-split lets a player's future leak into their own training history and inflates
-every metric.
+**Split.** Temporal, three ways. **Train 08-01→17** (features, item-item
+similarity, sequence matrix), **validation 08-18→24** (ranker labels, blend
+weights, model selection), **test 08-25→31** (read once). Never random: a random
+split lets a player's future leak into their own training history.
 
 **Index maps are built from training only**, so the test window cannot define
 the item space. 8,960 test interactions belong to players unseen in training —
 genuine cold-start users, correctly excluded from the cohort rather than
 scored.
 
-**Matrix.** 23,673 players × 3,202 games, 296,205 training interactions
-(density 0.39%). Confidence is `log1p(stake)`: raw stake spans orders of
+**Matrix.** 23,673 players × 3,202 games. 223,531 train / 115,086 validation /
+99,930 test interactions. Confidence is `log1p(stake)`: raw stake spans orders of
 magnitude and one whale would otherwise dominate every similarity.
 
 **One row was excluded from the item space entirely.** The export contains a
@@ -57,73 +64,72 @@ blended number would flatter every model here. So:
 
 ## 2. Results
 
-k = 10. Coverage = distinct games ever recommended. Novelty = mean
-unpopularity of what was recommended (higher = more obscure).
+k = 10. Coverage = distinct games ever recommended. "vs popularity" is the
+multiple over `most_played`, the row psk.hr ships today. Every figure is
+regenerated from `artifacts/eval_full.json` — none is typed by hand.
 
 ### 2.1 Discovery — popularity wins outright
 
-| Model | Cohort | P@10 | R@10 | **NDCG@10** | Coverage | Novelty |
+| Model | Cohort | P@10 | R@10 | **NDCG@10** | Coverage | vs popularity |
 |---|---|---|---|---|---|---|
-| **most_played** | 9,102 | 0.0841 | 0.3908 | **0.3050** | 41 | 0.002 |
-| provider_popular | 9,102 | 0.0605 | 0.2380 | 0.1737 | 288 | 0.010 |
-| most_staked | 9,102 | 0.0387 | 0.1201 | 0.0694 | 45 | 0.002 |
-| item_item CF | 9,102 | 0.0263 | 0.0674 | 0.0565 | 726 | 0.019 |
-| random | 9,102 | 0.0016 | 0.0031 | 0.0025 | 3,202 | 0.503 |
-| user_top | 9,102 | 0.0016 | 0.0024 | 0.0022 | 118 | 0.464 |
+| `most_played` | 8,304 | 0.0907 | 0.3838 | **0.2110** | 32 | 1.00x |
+| provider_popular | 8,304 | 0.0586 | 0.2057 | **0.1350** | 275 | 0.64x |
+| **Trained ranker** | 8,304 | 0.0378 | 0.0823 | **0.0677** | 720 | 0.32x |
+| Blend (sequence + CF) | 8,304 | 0.0363 | 0.0732 | **0.0650** | 583 | 0.31x |
+| Sequence | 8,304 | 0.0356 | 0.0708 | **0.0632** | 645 | 0.30x |
+| most_staked | 8,304 | 0.0265 | 0.0624 | **0.0489** | 37 | 0.23x |
+| Item-item CF | 8,304 | 0.0254 | 0.0568 | **0.0489** | 740 | 0.23x |
+| random | 8,304 | 0.0018 | 0.0029 | **0.0026** | 3202 | 0.01x |
+| user_top | 8,304 | 0.0019 | 0.0023 | **0.0025** | 104 | 0.01x |
 
-**Popularity beats collaborative filtering 5.4×.** This is not a tuning
-failure — it was tested:
+**Popularity beats every personalised model on raw next-game prediction.** Not a
+tuning failure; it was swept extensively. Next-game choice at PSK is
+overwhelmingly driven by what is already popular — Spearman **0.79** between
+training popularity and next-week discovery, and one title,
+*Goal Goal Goal: Cash Collect*, takes **13%** of all discovery plays alone.
 
-- popularity correction α swept over {+0.5, 0, −0.3, −0.6, −1.0, −1.5}: NDCG
-  rose monotonically as α went negative (0.0565 → 0.1775) but only by
-  converging on the popularity baseline, with coverage collapsing 726 → 87.
-- shrinkage swept over {0, 20}, `top_k` over {200, 300}.
-- a principled hybrid `norm(CF) + w·norm(popularity)` swept over
-  w ∈ {0, 0.05, 0.15, 0.3, 0.6, 1, 2, 5}: best NDCG **0.2453** at w=5, still
-  below plain popularity, and by then it *is* popularity.
+That is why the *Popularno* row is kept unchanged.
 
-**Why**, and this is a real finding about PSK rather than an artefact:
-next-game choice is overwhelmingly driven by what is already popular. Spearman
-correlation between training popularity and next-week discovery count is
-**0.79**. The top 10 games take **24.9%** of all discovery plays; one title,
-*Goal Goal Goal: Cash Collect*, takes **13% on its own**.
-
-### 2.2 Tail discovery — collaborative filtering wins
+### 2.2 Tail discovery — where personalisation wins
 
 Global top-50 removed from both candidates and ground truth. **76.5% of all
-discovery plays live here.**
+discovery plays live here**, and popularity can only ever reach ~29 games.
 
-| Model | Cohort | P@10 | R@10 | **NDCG@10** | Coverage | Novelty |
+| Model | Cohort | P@10 | R@10 | **NDCG@10** | Coverage | vs popularity |
 |---|---|---|---|---|---|---|
-| **item_item CF** | 6,323 | 0.0228 | 0.0581 | **0.0462** | **680** | 0.033 |
-| provider_popular | 6,323 | 0.0209 | 0.0460 | 0.0359 | 292 | 0.028 |
-| most_staked | 6,323 | 0.0135 | 0.0303 | 0.0220 | 31 | 0.019 |
-| most_played | 6,323 | 0.0135 | 0.0280 | 0.0205 | 37 | 0.017 |
-| random | 6,323 | 0.0020 | 0.0029 | 0.0026 | 3,152 | 0.510 |
-| user_top | 6,323 | 0.0012 | 0.0018 | 0.0017 | 118 | 0.517 |
+| **Trained ranker** | 5,921 | 0.0369 | 0.0831 | **0.0708** | 732 | 4.28x |
+| Blend (sequence + CF) | 5,921 | 0.0321 | 0.0788 | **0.0655** | 773 | 3.96x |
+| Sequence | 5,921 | 0.0324 | 0.0785 | **0.0649** | 887 | 3.92x |
+| Item-item CF | 5,921 | 0.0231 | 0.0626 | **0.0490** | 731 | 2.96x |
+| provider_popular | 5,921 | 0.0238 | 0.0519 | **0.0414** | 253 | 2.51x |
+| most_staked | 5,921 | 0.0155 | 0.0327 | **0.0258** | 26 | 1.56x |
+| `most_played` | 5,921 | 0.0103 | 0.0234 | **0.0165** | 29 | 1.00x |
+| random | 5,921 | 0.0023 | 0.0042 | **0.0034** | 3152 | 0.21x |
+| user_top | 5,921 | 0.0015 | 0.0020 | **0.0018** | 108 | 0.11x |
 
-**CF beats popularity 2.25× on NDCG@10 with 18× the catalogue coverage** (680
-games against 37). Excluding the top-20 or top-100 instead of the top-50 gives
-1.45× and 2.15× — the result is not an artefact of where the line is drawn.
-
-Popularity cannot serve the tail. It only knows 37 games.
+The **trained ranker** — a scikit-learn logistic regression over 14 features,
+fitted on 199,792 labelled rows (8.1% positive) — is the best model, and it
+beats the untrained blend whose candidates it re-ranks. Excluding the top-20 or
+top-100 instead of the top-50 preserves the ordering, so the result is not an
+artefact of where the line is drawn.
 
 ### 2.3 Repeat — the player's own history wins, as it should
 
-| Model | Cohort | P@10 | R@10 | **NDCG@10** |
-|---|---|---|---|---|
-| **user_top** | 9,257 | 0.2861 | 0.8264 | **0.7289** |
-| provider_popular | 9,257 | 0.2403 | 0.7584 | 0.5876 |
-| most_played | 9,257 | 0.2318 | 0.7457 | 0.5727 |
-| random | 9,257 | 0.2143 | 0.7108 | 0.5056 |
-| item_item CF | 9,257 | 0.2135 | 0.6977 | 0.4858 |
+| Model | Cohort | P@10 | R@10 | **NDCG@10** | Coverage | vs popularity |
+|---|---|---|---|---|---|---|
+| user_top | 7,781 | 0.2856 | 0.8444 | **0.7417** | 2401 | 1.26x |
+| Sequence | 7,781 | 0.2616 | 0.7992 | **0.6124** | 1924 | 1.04x |
+| provider_popular | 7,781 | 0.2490 | 0.7844 | **0.6099** | 1812 | 1.04x |
+| Blend (sequence + CF) | 7,781 | 0.2558 | 0.7866 | **0.5978** | 1906 | 1.02x |
+| `most_played` | 7,781 | 0.2387 | 0.7706 | **0.5870** | 1778 | 1.00x |
+| most_staked | 7,781 | 0.2404 | 0.7722 | **0.5816** | 1782 | 0.99x |
+| random | 7,781 | 0.2260 | 0.7460 | **0.5410** | 2548 | 0.92x |
+| Item-item CF | 7,781 | 0.2234 | 0.7283 | **0.5101** | 1889 | 0.87x |
+| **Trained ranker** | 7,781 | 0.0017 | 0.0042 | **0.0032** | 10 | 0.01x |
 
-Note `random` scores 0.5056 here. That is not a bug: the repeat task ranks only
-within a player's own history, and a median player has few games, so any
-ordering does well. **The repeat task is easy and we label it as such.** It
-justifies a "Continue playing" row; it justifies nothing else.
-
----
+`random` scores well here because the repeat task ranks only within a player's
+own history, and a median player has few games. **The repeat task is easy and we
+label it as such.** It justifies a *Nastavi igrati* row and nothing else.
 
 ## 3. What no model can reach
 
@@ -142,15 +148,16 @@ separate "New releases" row — which is why the lobby has one.
 
 | Row | Model | Justified by |
 |---|---|---|
-| Trending now | `most_played` | §2.1 — popularity wins the head outright |
-| Continue playing | `user_top` | §2.3 — 0.73 NDCG, and honestly labelled as easy |
-| Picked for you | item-item CF | §2.2 |
-| Discover something new | item-item CF, top-50 removed | §2.2 — 2.25× and 18× coverage |
-| New releases | cold items | §3 — 12.1% of discovery, unreachable otherwise |
+| **Popularno** | `most_played` | §2.1 — popularity wins the head outright |
+| **Nastavi igrati** | recency-weighted history | §2.3 — easy task, honestly labelled |
+| **Preporučeno za tebe** | trained ranker | §2.2 |
+| **Otkrij nešto novo** | trained ranker, top-50 removed | §2.2 — 4.28x and 25x coverage |
+| **Jackpoti** | jackpot games, ranker-ordered | 136 titles, from 12 months of CA_MOM |
+| **Nove igre** | real release age | 275 titles first seen in the last 3 months |
 
 **We did not replace the row PSK already ships.** `most_played` is
 *Najigranije*, live today, and it wins its job. The recommender is additive: it
-reaches 680 games where popularity reaches 37.
+reaches **732 games where popularity reaches 29**.
 
 ---
 
@@ -167,13 +174,13 @@ reaches 680 games where popularity reaches 37.
    predicts its own success. This biases §2.1 *in favour of* `most_played` and
    is a further reason not to read that table as the whole story.
 4. **83% of stake is on unnameable games.** They train the model but can never
-   be *recommended*, so the recommendable catalogue is 351 of 3,202. The same
+   be *recommended*, so the recommendable catalogue is 479 of 3,202 (the name bridge recovered 128). The same
    gap means **54% of players have no nameable game in their own history** —
    "Continue playing" therefore labels those by provider and kind
    ("Amusnet slot"), marked `named: false` and visibly dimmed, which lifts that
    row from 46.5% to 100% of players. A game catalogue from FEG would remove
    the limit entirely.
-5. **No confidence intervals.** Differences of the size in §2.2 (2.25×) are
+5. **No confidence intervals.** Differences of the size in §2.2 (4.28x) are
    unlikely to be noise at n=6,323, but we have not bootstrapped them.
 6. **Only one model family was taken to completion.** An implicit-feedback
    ALS implementation was written and then removed rather than shipped
