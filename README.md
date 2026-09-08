@@ -382,9 +382,9 @@ outputs. 18 MB total.
 | | |
 |---|---|
 | **Team name** | Q'Makers |
-| **Team lead** | `[TEAM TO ADD]` |
-| **Members** | `[TEAM TO ADD]` |
-| **Contact** | `[TEAM TO ADD]` |
+| **Team lead** | `Bandlapalli Roshan Babu` |
+| **Members** | `C.Kavya Sri , M.Yashwanth]` |
+| **Contact** | `broshann14@gmail.com` |
 
 > ⚠️ Fill this in before submitting. The demo is given live — the runbook,
 > failure recovery and expected questions are in
