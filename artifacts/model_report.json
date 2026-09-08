@@ -1,12 +1,27 @@
 {
- "model": "item_item",
- "alpha": 0.0,
- "shrink": 20.0,
- "top_k": 300,
- "items": 3202,
+ "models": [
+  "item_item",
+  "sequence"
+ ],
+ "blend": {
+  "cf": 1.0,
+  "sequence": 3.0,
+  "popularity": 0.0
+ },
+ "cf": {
+  "alpha": 0.0,
+  "shrink": 20.0,
+  "top_k": 300,
+  "nnz": 902348
+ },
+ "sequence": {
+  "alpha": 0.0,
+  "shrink": 5.0,
+  "top_k": 200,
+  "nnz": 517623
+ },
  "players": 23673,
+ "items": 3202,
  "interactions": 296205,
- "sim_nnz": 902348,
- "cold_items": 92,
  "head_n": 50
 }

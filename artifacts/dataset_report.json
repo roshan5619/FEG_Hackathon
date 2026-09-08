@@ -1,20 +1,36 @@
 {
- "source": "CA_Player.csv",
+ "sources": {
+  "stake": "CA_Player.csv",
+  "monthly": "CA_MOM.csv",
+  "event_logs": [
+   "top_casino_users_event_logs.csv",
+   "top_sport_users_event_logs.csv"
+  ]
+ },
  "rows": 741679,
- "dropped_non_game_rows": 48,
+ "dropped": {
+  "zero_stake": 395,
+  "negative_stake": 530,
+  "non_game": 48
+ },
  "date_range": [
   "2026-08-01",
   "2026-08-31"
  ],
  "split_date": "2026-08-25",
- "players_train": 23673,
+ "months_of_history": 12,
+ "players": 23673,
  "games_trainable": 3202,
- "games_displayable": 351,
+ "games_displayable": 479,
+ "games_named_by_bridge": 180,
+ "new_games": 275,
+ "jackpot_games": 136,
  "interactions_train": 296205,
  "interactions_test": 99930,
- "test_repeat_cells": 43530,
- "test_discovery_cells": 56400,
- "density_train_pct": 0.391,
+ "sequence_transitions": 114898,
+ "sequence_pairs": 1421509,
+ "sb_crossover_players": 7898,
+ "recency_halflife_days": 10.0,
  "families": {
   "opaque_hash": {
    "games": 2625,

@@ -1,169 +1,180 @@
 <!doctype html>
-<html lang="en">
+<html lang="hr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PSK Personalised Lobby</title>
+<title>PSK Casino — Personalizirani lobi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-/* A casino lobby is a dark surface everywhere it ships. This commits to one
-   look deliberately rather than half-supporting two, and paints every colour
-   explicitly so it never borrows the host's theme. */
+/* Structure and row naming mirror the live casino.psk.hr lobby so this reads as
+   a feature of that product. Dark ground, as every casino lobby ships. */
 :root{
   color-scheme: dark;
-  --plane:#0a0d11; --surface:#141a21; --raise:#1b232c; --sunk:#10161c;
-  --ink:#ffffff; --ink2:#b9c3d0; --muted:#7f8b99;
-  --line:rgba(255,255,255,.10); --rule:#2a333f;
-  --accent:#3987e5; --accent-dim:#1c5cab;
-  --cf:#3987e5; --pop:#d95926; --new:#199e70; --own:#8b93a0;
-  --good:#0ca30c; --warn:#fab219; --crit:#e0564f;
+  --plane:#0a0e14; --surface:#141a23; --raise:#1c242f; --sunk:#10151c;
+  --ink:#ffffff; --ink2:#b6c1d0; --muted:#7c8898;
+  --line:rgba(255,255,255,.10); --rule:#28313d;
+  --accent:#3987e5; --gold:#e8b23a; --green:#199e70; --red:#e0564f; --warn:#fab219;
   --sans:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--plane);color:var(--ink);
-  font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1240px;margin:0 auto;padding:0 22px}
-h1,h2,h3{margin:0;text-wrap:balance}
+html,body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1340px;margin:0 auto;padding:0 20px}
+h1,h2,h3,p{margin:0}
 button,select,input{font-family:inherit}
-a{color:var(--accent)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
 
-/* masthead */
-.mast{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
-.mast-in{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:13px 0}
-.brand{font-weight:800;font-size:18px;letter-spacing:-.02em}
-.brand span{color:var(--accent)}
-.mock{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--warn);border:1px solid currentColor;border-radius:2px;padding:2px 7px}
-.mast .spacer{margin-left:auto}
-label.f{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px}
-select,.btn{background:var(--raise);color:var(--ink);border:1px solid var(--rule);
-  border-radius:3px;padding:7px 10px;font-size:13px}
-select{min-width:230px}
-.btn{cursor:pointer}
-.btn:hover{border-color:var(--accent)}
+.topnav{background:#0d1218;border-bottom:1px solid var(--line)}
+.topnav-in{display:flex;align-items:center;gap:6px;height:52px;overflow-x:auto}
+.logo{font-weight:800;font-size:19px;letter-spacing:-.02em;margin-right:14px;white-space:nowrap}
+.logo span{color:var(--accent)}
+.topnav a{color:var(--ink2);text-decoration:none;font-size:13.5px;font-weight:500;
+  padding:7px 12px;border-radius:4px;white-space:nowrap}
+.topnav a.on{background:var(--raise);color:var(--ink)}
+.topnav a:hover{color:var(--ink)}
+.mock{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--warn);border:1px solid currentColor;
+  border-radius:2px;padding:3px 7px;white-space:nowrap}
 
-/* control strip */
-.controls{background:var(--sunk);border-bottom:1px solid var(--line)}
-.controls-in{display:flex;flex-wrap:wrap;gap:16px 26px;align-items:flex-end;padding:14px 0}
-.toggles{display:flex;flex-wrap:wrap;gap:8px}
-.tg{display:inline-flex;align-items:center;gap:7px;background:var(--raise);
-  border:1px solid var(--rule);border-radius:3px;padding:6px 10px;font-size:12.5px;
-  color:var(--ink2);cursor:pointer;user-select:none}
-.tg input{accent-color:var(--crit);margin:0}
-.tg:hover{border-color:var(--muted)}
-.tg.on{border-color:var(--crit);color:var(--ink)}
+.subnav{background:var(--surface);border-bottom:1px solid var(--line)}
+.subnav-in{display:flex;align-items:center;gap:8px;height:50px;overflow-x:auto}
+.chip{background:var(--raise);border:1px solid var(--rule);color:var(--ink2);
+  border-radius:20px;padding:6px 14px;font-size:12.5px;white-space:nowrap;cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.chip:hover{color:var(--ink)}
+.search{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--raise);
+  border:1px solid var(--rule);border-radius:6px;padding:7px 12px;min-width:230px}
+.search input{background:none;border:0;color:var(--ink);font-size:13px;width:100%;outline:none}
+.search input::placeholder{color:var(--muted)}
 
-/* status banner */
-.status{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;
-  padding:11px 14px;border-radius:3px;margin:16px 0 4px;font-size:13px}
-.status.normal{background:rgba(12,163,12,.10);border:1px solid rgba(12,163,12,.35)}
+.demo{background:var(--sunk);border-bottom:1px solid var(--line)}
+.demo-in{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:11px 0}
+.demo .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+select.player{background:var(--raise);color:var(--ink);border:1px solid var(--rule);
+  border-radius:5px;padding:7px 10px;font-size:13px;min-width:250px}
+.tg{display:inline-flex;align-items:center;gap:6px;background:var(--raise);border:1px solid var(--rule);
+  border-radius:5px;padding:6px 10px;font-size:12px;color:var(--ink2);cursor:pointer;user-select:none}
+.tg input{accent-color:var(--red);margin:0}
+.tg.on{border-color:var(--red);color:var(--ink)}
+.tg select{background:none;border:0;color:var(--ink);font-size:12px}
+
+.status{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:10px 14px;
+  border-radius:5px;margin:16px 0 0;font-size:13px}
+.status b{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase}
+.status.normal{background:rgba(25,158,112,.10);border:1px solid rgba(25,158,112,.35)}
 .status.mild,.status.moderate{background:rgba(250,178,25,.10);border:1px solid rgba(250,178,25,.38)}
 .status.severe,.status.blocked{background:rgba(224,86,79,.12);border:1px solid rgba(224,86,79,.45)}
-.status b{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase}
-.status .reasons{color:var(--ink2);font-size:12.5px}
+.status span{color:var(--ink2);font-size:12.5px}
 
-/* rows */
 .row{margin:30px 0 0}
-.row-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-bottom:11px}
-.row-head h2{font-size:17px;font-weight:700;letter-spacing:-.015em}
-.row-head .sub{font-size:12.5px;color:var(--muted)}
-.src{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
-  padding:2px 7px;border-radius:2px;border:1px solid currentColor;margin-left:auto;white-space:nowrap}
-.src.item_item_cf,.src.item_item_cf_tail{color:var(--cf)}
-.src.most_played{color:var(--pop)}
-.src.cold_items{color:var(--new)}
-.src.user_history{color:var(--own)}
+.rhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-bottom:12px}
+.rhead h2{font-size:19px;font-weight:700;letter-spacing:-.015em}
+.rhead .sub{font-size:12.5px;color:var(--muted)}
+.pers{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
+.pers.yes{color:var(--accent)} .pers.no{color:var(--muted)}
+.src{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
 
-.strip{display:grid;grid-auto-flow:column;grid-auto-columns:170px;gap:12px;
-  overflow-x:auto;padding-bottom:8px;scroll-snap-type:x proximity}
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:184px;gap:12px;
+  overflow-x:auto;padding-bottom:10px;scroll-snap-type:x proximity}
 .strip::-webkit-scrollbar{height:8px}
 .strip::-webkit-scrollbar-thumb{background:var(--rule);border-radius:4px}
-.tile{background:var(--surface);border:1px solid var(--line);border-radius:4px;
-  overflow:hidden;display:flex;flex-direction:column;scroll-snap-align:start}
-.art{height:96px;display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:26px;font-weight:600;color:rgba(255,255,255,.82);
-  letter-spacing:-.02em;position:relative}
-.art::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.45))}
-.tile-body{padding:9px 10px 10px;display:flex;flex-direction:column;gap:4px;flex:1}
-.tile-title{font-size:13px;font-weight:600;line-height:1.3;
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:7px;overflow:hidden;
+  display:flex;flex-direction:column;scroll-snap-align:start;transition:transform .12s,border-color .12s}
+.tile:hover{transform:translateY(-3px);border-color:var(--accent)}
+.art{height:112px;position:relative;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:30px;font-weight:600;color:rgba(255,255,255,.86);letter-spacing:-.03em}
+.art::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.5))}
+.badges{position:absolute;top:6px;left:6px;display:flex;flex-wrap:wrap;gap:4px;z-index:2}
+.bdg{font-family:var(--mono);font-size:8.5px;font-weight:600;letter-spacing:.06em;
+  padding:2px 5px;border-radius:2px;color:#0a0e14;background:var(--muted)}
+.bdg.NOVO{background:var(--green);color:#fff}
+.bdg.JACKPOT{background:var(--gold)}
+.bdg.UPORASTU{background:var(--accent);color:#fff}
+.body{padding:9px 10px 10px;display:flex;flex-direction:column;gap:3px;flex:1}
+.tname{font-size:12.5px;font-weight:600;line-height:1.3;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.tile-prov{font-family:var(--mono);font-size:10px;color:var(--muted)}
-.tile-why{font-size:11px;color:var(--ink2);margin-top:auto;padding-top:6px;
-  border-top:1px solid var(--line);line-height:1.35}
-/* A tile whose game we cannot name. Dimmed and dashed so it never reads as a
-   real title, and only ever appears in "Continue playing". */
-.tile.unnamed .art{filter:saturate(.25) brightness(.8)}
-.tile.unnamed .tile-title{color:var(--ink2);font-style:italic}
+.tprov{font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+.twhy{font-size:10.5px;color:var(--accent);margin-top:auto;padding-top:7px;
+  border-top:1px solid var(--line);line-height:1.35;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile.global .twhy{color:var(--muted)}
 .tile.unnamed{border-style:dashed}
+.tile.unnamed .art{filter:saturate(.2) brightness(.75)}
+.tile.unnamed .tname{color:var(--ink2);font-style:italic}
 
-/* blocked / empty */
-.empty{background:var(--surface);border:1px solid var(--line);border-radius:4px;
-  padding:26px 24px;margin-top:22px}
-.empty h3{font-size:15px;margin-bottom:7px}
-.empty p{margin:0;color:var(--ink2);font-size:13.5px;max-width:66ch}
-.empty ul{margin:10px 0 0;padding-left:18px;color:var(--ink2);font-size:13px}
-
-/* footer note */
-.note{margin:36px 0 0;padding:16px 18px;background:var(--sunk);border:1px solid var(--line);
-  border-left:2px solid var(--accent);border-radius:3px}
-.note b{display:block;font-size:13.5px;margin-bottom:5px}
-.note p{margin:0 0 8px;color:var(--ink2);font-size:13px;max-width:78ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:24px;margin-top:22px}
+.panel h3{font-size:15px;margin-bottom:8px}
+.panel p{color:var(--ink2);font-size:13.5px;max-width:70ch}
+.panel ul{margin:10px 0 0;padding-left:18px;color:var(--ink2);font-size:13px}
+.note{margin:36px 0 0;padding:18px 20px;background:var(--sunk);border:1px solid var(--line);
+  border-left:2px solid var(--accent);border-radius:5px}
+.note b{display:block;font-size:13.5px;margin-bottom:6px}
+.note p{margin:0 0 9px;color:var(--ink2);font-size:13px;max-width:82ch}
 .note p:last-child{margin-bottom:0}
 .note code{font-family:var(--mono);font-size:11.5px;background:var(--raise);padding:1px 5px;border-radius:2px}
-footer{padding:26px 0 44px;color:var(--muted);font-size:12px}
-.loading{padding:40px 0;color:var(--muted);font-family:var(--mono);font-size:13px}
+footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
+.loading{padding:44px 0;color:var(--muted);font-family:var(--mono);font-size:13px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 
-<div class="mast"><div class="wrap"><div class="mast-in">
-  <div class="brand">PSK <span>Casino</span></div>
-  <span class="mock">Prototype · not affiliated</span>
-  <div class="spacer"></div>
-  <div>
-    <label class="f" for="player">Signed in as</label>
-    <select id="player"><option>loading…</option></select>
-  </div>
+<div class="topnav"><div class="wrap"><nav class="topnav-in">
+  <div class="logo">PSK<span>.</span></div>
+  <a href="#">Sport</a><a href="#">Uživo</a><a href="#" class="on">Casino</a>
+  <a href="#">Live Casino</a><a href="#">Loto</a><a href="#">Virtualne igre</a><a href="#">Promo</a>
+  <span class="mock">Prototip · nije povezano s PSK</span>
+</nav></div></div>
+
+<div class="subnav"><div class="wrap"><div class="subnav-in">
+  <button class="chip on">Lobby</button>
+  <button class="chip">Provideri</button>
+  <button class="chip">Jackpoti</button>
+  <button class="chip">Teme</button>
+  <button class="chip">Nove Igre</button>
+  <button class="chip">Popularno</button>
+  <button class="chip">Buy Bonus</button>
+  <button class="chip">Sve igre</button>
+  <label class="search">🔍<input placeholder="Pronađi svoju igru" aria-label="Pronađi svoju igru"></label>
 </div></div></div>
 
-<div class="controls"><div class="wrap"><div class="controls-in">
-  <div>
-    <span class="f">Responsible-play state (simulated account flags)</span>
-    <div class="toggles" id="toggles"></div>
-  </div>
+<div class="demo"><div class="wrap"><div class="demo-in">
+  <span class="lbl">Prijavljen kao</span>
+  <select class="player" id="player"><option>učitavanje…</option></select>
+  <span class="lbl">Simulacija zaštite igrača</span>
+  <div id="toggles" style="display:flex;flex-wrap:wrap;gap:8px"></div>
 </div></div></div>
 
 <div class="wrap">
   <div id="status"></div>
-  <div id="rows"><div class="loading">Loading lobby…</div></div>
+  <div id="rows"><div class="loading">Učitavanje lobija…</div></div>
 
   <div class="note">
     <b>What you are looking at</b>
-    <p><strong>Trending now</strong> is popularity — the row psk.hr ships today as
-    <em>Najigranije</em>. We kept it because it measurably wins: on next-game prediction,
-    global popularity beat collaborative filtering outright (NDCG@10 <code>0.305</code> vs
-    <code>0.056</code>). Replacing it would have made the lobby worse.</p>
-    <p><strong>Picked for you</strong> and <strong>Discover something new</strong> are
-    item-item collaborative filtering. Once the global top-50 are removed, CF beats
-    popularity <code>2.25×</code> on NDCG@10 with <code>18×</code> the catalogue coverage
-    (680 games against 37) — and <code>76.5%</code> of all discovery plays live in that tail.
-    Popularity structurally cannot reach it.</p>
-    <p><strong>New releases</strong> exists because <code>12.1%</code> of discovery is on
-    games with zero play history. No collaborative model can ever retrieve those, so they
-    get their own row instead of being silently unreachable.</p>
-    <p>Every tile carries the literal top contributor to its score, not a generated
-    rationale. Where the source game is an opaque code the copy says so rather than
-    inventing a name. Full method and results in <code>docs/evaluation.md</code>.</p>
+    <p><strong>Popularno</strong> is the row psk.hr ships today (<em>Najigranije</em>). We kept it:
+    on next-game prediction, global popularity beat collaborative filtering outright —
+    <code>0.305</code> vs <code>0.056</code> NDCG@10. Replacing it would have made the lobby worse.</p>
+    <p><strong>Nastavi igrati</strong>, <strong>Preporučeno za tebe</strong>,
+    <strong>Otkrij nešto novo</strong> and <strong>Jackpoti</strong> are personalised. The model blends
+    day-to-day play sequence with item-item collaborative filtering, 3:1 in favour of sequence. On the
+    tail — outside the global top 50, where <code>76.5%</code> of discovery happens — it beats
+    popularity <code>3.06×</code> on NDCG@10 while reaching <code>723</code> games instead of
+    <code>37</code>.</p>
+    <p><strong>Nove igre</strong> uses 12 months of history to find titles genuinely first released in
+    the last three months — not merely games with no data. Badges come from the same source:
+    <code>NOVO</code>, <code>JACKPOT</code>, <code>U PORASTU</code> (rising stake momentum).</p>
+    <p>Every tile's reason is the literal top contributor to its score. A dashed, dimmed tile is a game
+    whose title is not in the data — shown only in your own history, never recommended.
+    Full method in <code>docs/evaluation.md</code>.</p>
   </div>
 
   <footer>
-    Anonymised FEG sample data · players are pre-hashed identifiers · no personal data.
-    Recommendations never reach a self-excluded account: the gate runs before scoring.
+    Anonimizirani FEG uzorak · igrači su unaprijed hashirani identifikatori · nema osobnih podataka.
+    Preporuke nikada ne dolaze do samoisključenog računa: provjera se izvodi prije modela, a ne nakon njega.
   </footer>
 </div>
 
@@ -171,161 +182,124 @@ footer{padding:26px 0 44px;color:var(--muted);font-size:12px}
 (function(){
   "use strict";
   var $ = function(s){ return document.querySelector(s); };
-  var el = function(t,c,h){ var e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e; };
-  var esc = function(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){
-    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); };
+  function el(t,c,h){ var e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e; }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
 
-  var FLAGS = [
-    ["self_excluded", "Self-excluded"],
-    ["chasing_losses", "Loss chasing"],
-    ["stake_above_own_history", "Stake above own history"]
-  ];
-  var state = { player: null, flags: {}, deposits: 0 };
+  var FLAGS=[["self_excluded","Samoisključen"],["chasing_losses","Juri gubitke"],
+             ["stake_above_own_history","Ulog iznad prosjeka"]];
+  var state={player:null,flags:{},deposits:0};
 
-  // Deterministic tile colour from the title, so a game looks the same every
-  // load. Real thumbnails would come from a game catalogue we do not have.
   function hue(s){ var h=0; for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return h%360; }
-  function art(title){
-    var h = hue(title);
-    var d = el("div","art", esc(title.replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase()));
-    d.style.background = "linear-gradient(140deg,hsl("+h+" 42% 30%),hsl("+((h+38)%360)+" 46% 19%))";
+  function art(t,badges){
+    var h=hue(t), d=el("div","art");
+    d.style.background="linear-gradient(140deg,hsl("+h+" 45% 32%),hsl("+((h+40)%360)+" 48% 18%))";
+    if(badges&&badges.length){
+      var b=el("div","badges");
+      badges.forEach(function(x){ b.appendChild(el("span","bdg "+x.replace(/\s+/g,""),esc(x))); });
+      d.appendChild(b);
+    }
+    d.appendChild(document.createTextNode(t.replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase()));
     return d;
   }
-
-  function tile(t){
-    var d = el("div","tile" + (t.named === false ? " unnamed" : ""));
-    d.appendChild(art(t.title));
-    var b = el("div","tile-body");
-    b.appendChild(el("div","tile-title", esc(t.title)));
-    b.appendChild(el("div","tile-prov", esc(t.provider || "—")));
-    b.appendChild(el("div","tile-why", esc(t.why)));
-    d.appendChild(b);
-    return d;
+  function tile(t,personalised){
+    var d=el("div","tile"+(t.named===false?" unnamed":"")+(personalised?"":" global"));
+    d.appendChild(art(t.title,t.badges));
+    var b=el("div","body");
+    b.appendChild(el("div","tname",esc(t.title)));
+    b.appendChild(el("div","tprov",esc(t.provider||"—")));
+    b.appendChild(el("div","twhy",esc(t.why)));
+    d.appendChild(b); return d;
   }
 
-  function renderStatus(rp, suppressed){
-    var box = $("#status"); box.textContent = "";
-    var s = (rp.state || "NORMAL").toLowerCase();
-    var d = el("div","status "+s);
-    d.appendChild(el("b", null, "Responsible play: " + esc(rp.state)));
-    var msg = rp.hard_gate
-      ? "Hard gate. No recommendation is generated for this account at all."
-      : (suppressed && suppressed.length
-          ? "Engagement rows withheld: " + suppressed.join(", ")
-          : "No harmful-play indicators. Full lobby served.");
-    d.appendChild(el("span","reasons", esc(msg)));
-    if(rp.reasons && rp.reasons.length)
-      d.appendChild(el("span","reasons", "· " + esc(rp.reasons.join(" "))));
+  function renderStatus(rp,supp){
+    var box=$("#status"); box.textContent="";
+    var d=el("div","status "+(rp.state||"NORMAL").toLowerCase());
+    d.appendChild(el("b",null,"Zaštita igrača: "+esc(rp.state)));
+    d.appendChild(el("span",null, rp.hard_gate
+      ? "Tvrda blokada. Za ovaj račun ne generira se nijedna preporuka."
+      : (supp&&supp.length ? "Suspendirani redovi: "+supp.join(", ")
+                           : "Nema pokazatelja štetne igre. Puni lobi.")));
     box.appendChild(d);
   }
 
   function render(data){
-    renderStatus(data.responsible_play || {}, data.suppressed_rows || []);
-    var host = $("#rows"); host.textContent = "";
-
-    if(!data.rows || !data.rows.length){
-      var e = el("div","empty");
-      e.appendChild(el("h3", null, "No recommendations for this account"));
-      e.appendChild(el("p", null,
-        "The responsible-play gate resolved to <strong>" + esc((data.responsible_play||{}).state) +
-        "</strong>. Nothing from the recommender reaches a blocked account — it is not " +
-        "scored and then filtered, it is never scored."));
-      if(data.required_surfaces && data.required_surfaces.length){
-        var ul = el("ul");
-        data.required_surfaces.forEach(function(s){ ul.appendChild(el("li", null, esc(s))); });
-        e.appendChild(el("p", null, "Surfaces that must be shown instead:"));
-        e.appendChild(ul);
+    renderStatus(data.responsible_play||{}, data.suppressed_rows||[]);
+    var host=$("#rows"); host.textContent="";
+    if(!data.rows||!data.rows.length){
+      var e=el("div","panel");
+      e.appendChild(el("h3",null,"Nema preporuka za ovaj račun"));
+      e.appendChild(el("p",null,"Zaštita igrača: <strong>"+esc((data.responsible_play||{}).state)+
+        "</strong>. Ništa iz preporučitelja ne dolazi do blokiranog računa — nije filtrirano nakon "+
+        "bodovanja, nego uopće nije bodovano."));
+      if((data.required_surfaces||[]).length){
+        var ul=el("ul"); data.required_surfaces.forEach(function(s){ ul.appendChild(el("li",null,esc(s))); });
+        e.appendChild(el("p",null,"Umjesto toga moraju se prikazati:")); e.appendChild(ul);
       }
-      host.appendChild(e);
-      return;
+      host.appendChild(e); return;
     }
-
     if(data.cold_start){
-      var c = el("div","empty");
-      c.appendChild(el("h3", null, "Cold start"));
-      c.appendChild(el("p", null, esc(data.cold_start)));
+      var c=el("div","panel");
+      c.appendChild(el("h3",null,"Novi igrač (cold start)"));
+      c.appendChild(el("p",null,esc(data.cold_start)));
       host.appendChild(c);
     }
-
     data.rows.forEach(function(r){
-      var sec = el("section","row");
-      var head = el("div","row-head");
-      head.appendChild(el("h2", null, esc(r.title)));
-      head.appendChild(el("span","sub", esc(r.subtitle)));
-      head.appendChild(el("span","src "+esc(r.source), esc(r.source)));
-      sec.appendChild(head);
-      var strip = el("div","strip");
-      r.tiles.forEach(function(t){ strip.appendChild(tile(t)); });
-      sec.appendChild(strip);
-      host.appendChild(sec);
+      var sec=el("section","row"), h=el("div","rhead");
+      h.appendChild(el("h2",null,esc(r.title)));
+      h.appendChild(el("span","sub",esc(r.subtitle)));
+      h.appendChild(el("span","pers "+(r.personalised?"yes":"no"),
+        r.personalised?"personalizirano":"globalno"));
+      h.appendChild(el("span","src",esc(r.source)));
+      sec.appendChild(h);
+      var strip=el("div","strip");
+      r.tiles.forEach(function(t){ strip.appendChild(tile(t,r.personalised)); });
+      sec.appendChild(strip); host.appendChild(sec);
     });
   }
 
   function query(){
-    var p = new URLSearchParams();
-    FLAGS.forEach(function(f){ if(state.flags[f[0]]) p.set(f[0], "true"); });
-    if(state.deposits) p.set("deposits_this_session", String(state.deposits));
+    var p=new URLSearchParams();
+    FLAGS.forEach(function(f){ if(state.flags[f[0]]) p.set(f[0],"true"); });
+    if(state.deposits) p.set("deposits_this_session",String(state.deposits));
     return p.toString();
   }
-
   function load(){
     if(!state.player) return;
-    $("#rows").innerHTML = '<div class="loading">Loading lobby…</div>';
-    fetch("/recommendations/" + encodeURIComponent(state.player) + "?" + query())
-      .then(function(r){ return r.json(); })
-      .then(render)
-      .catch(function(e){
-        $("#rows").innerHTML = '<div class="empty"><h3>Could not load</h3><p>' +
-          esc(e.message) + '</p></div>';
-      });
+    $("#rows").innerHTML='<div class="loading">Učitavanje lobija…</div>';
+    fetch("/recommendations/"+encodeURIComponent(state.player)+"?"+query())
+      .then(function(r){ return r.json(); }).then(render)
+      .catch(function(e){ $("#rows").innerHTML='<div class="panel"><h3>Greška</h3><p>'+esc(e.message)+'</p></div>'; });
   }
 
-  function buildToggles(){
-    var host = $("#toggles");
-    FLAGS.forEach(function(f){
-      var lab = el("label","tg");
-      var cb = el("input"); cb.type = "checkbox";
-      cb.addEventListener("change", function(){
-        state.flags[f[0]] = cb.checked;
-        lab.classList.toggle("on", cb.checked);
-        load();
-      });
-      lab.appendChild(cb);
-      lab.appendChild(document.createTextNode(f[1]));
-      host.appendChild(lab);
-    });
-    var lab = el("label","tg");
-    var sel = el("select"); sel.style.minWidth = "auto"; sel.style.padding = "2px 6px";
-    [0,1,2,3,4].forEach(function(n){
-      var o = el("option", null, String(n)); o.value = n; sel.appendChild(o);
-    });
-    sel.addEventListener("change", function(){
-      state.deposits = Number(sel.value);
-      lab.classList.toggle("on", state.deposits >= 2);
-      load();
-    });
-    lab.appendChild(document.createTextNode("Deposits this session"));
-    lab.appendChild(sel);
-    host.appendChild(lab);
-  }
-
-  fetch("/players?limit=15").then(function(r){ return r.json(); }).then(function(d){
-    var sel = $("#player"); sel.textContent = "";
-    (d.players || []).forEach(function(p, i){
-      var o = el("option", null,
-        "Player " + String(i + 1).padStart(2, "0") +
-        " · " + p.named_games + " named / " + p.games_played + " games");
-      o.value = p.player_id;
-      sel.appendChild(o);
-    });
-    sel.addEventListener("change", function(){ state.player = sel.value; load(); });
-    if(sel.options.length){ state.player = sel.options[0].value; load(); }
-  }).catch(function(e){
-    $("#rows").innerHTML = '<div class="empty"><h3>API not reachable</h3><p>Start it with ' +
-      '<code>uvicorn src.api.app:app --port 8000</code> and reload.</p></div>';
+  var tg=$("#toggles");
+  FLAGS.forEach(function(f){
+    var l=el("label","tg"), cb=el("input"); cb.type="checkbox";
+    cb.addEventListener("change",function(){ state.flags[f[0]]=cb.checked;
+      l.classList.toggle("on",cb.checked); load(); });
+    l.appendChild(cb); l.appendChild(document.createTextNode(f[1])); tg.appendChild(l);
   });
+  (function(){
+    var l=el("label","tg"), s=el("select");
+    [0,1,2,3,4].forEach(function(n){ var o=el("option",null,String(n)); o.value=n; s.appendChild(o); });
+    s.addEventListener("change",function(){ state.deposits=Number(s.value);
+      l.classList.toggle("on",state.deposits>=2); load(); });
+    l.appendChild(document.createTextNode("Uplata u sesiji")); l.appendChild(s); tg.appendChild(l);
+  })();
 
-  buildToggles();
+  fetch("/players?limit=20").then(function(r){ return r.json(); }).then(function(d){
+    var sel=$("#player"); sel.textContent="";
+    (d.players||[]).forEach(function(p,i){
+      var o=el("option",null,"Igrač "+String(i+1).padStart(2,"0")+
+        " · "+p.named_games+" poznatih / "+p.games_played+" igara");
+      o.value=p.player_id; sel.appendChild(o);
+    });
+    sel.addEventListener("change",function(){ state.player=sel.value; load(); });
+    if(sel.options.length){ state.player=sel.options[0].value; load(); }
+  }).catch(function(){
+    $("#rows").innerHTML='<div class="panel"><h3>API nije dostupan</h3><p>Pokreni '+
+      '<code>uvicorn src.api.app:app --port 8000</code> i osvježi stranicu.</p></div>';
+  });
 })();
 </script>
 </body>

@@ -3,14 +3,12 @@ Fit the models once, offline, and save what serving needs.
 
     python -m src.recsys.train
 
-The API must not fit a model at startup. This writes artifacts/model.npz with
-the item-item similarity matrix, the popularity vector and the cold-item list,
-so `serve.py` is a few sparse lookups per request.
+The API must never fit a model at startup. This writes artifacts/model.npz with
+the item-item similarity, the normalised day-to-day transition matrix and the
+popularity vector, so a request is a few sparse lookups.
 
-The similarity matrix is trained on the FULL catalogue (all 3,202 games,
-including the 2,625 opaque codes carrying 83% of stake) because their
-co-occurrence is what makes neighbourhoods meaningful. Filtering to displayable
-games happens at serving time, never here.
+Blend weights are the measured optimum on tail discovery (see
+docs/evaluation.md), not a guess: cf=1.0, seq=3.0, pop=0.0.
 """
 from __future__ import annotations
 
@@ -21,45 +19,45 @@ import numpy as np
 from scipy import sparse
 
 from src.pipeline.build_dataset import ART, load
+from src.recsys.hybrid import SequenceRec
 from src.recsys.item_item import ItemItemCF
 
-HEAD_N = 50          # "trending" size, and the head excluded from tail rows
+HEAD_N = 50          # "Popularno" size, and the head excluded from discovery rows
+W_CF, W_SEQ, W_POP = 1.0, 3.0, 0.0
 
 
 def train():
     d = load()
-    X = d["X_train"]
-    print("fitting item-item on", X.shape, X.nnz, "interactions")
+    X, T, R = d["X_train"], d["T"], d["X_recent"]
+    print("fitting on", X.shape, format(X.nnz, ","), "interactions")
 
-    cf = ItemItemCF()
-    cf.fit(X)
+    cf = ItemItemCF().fit(X)
+    seq = SequenceRec(T, R, alpha=0.0).fit(X)
 
     binar = X.copy()
     binar.data = np.ones_like(binar.data)
     pop = np.asarray(binar.sum(axis=0)).ravel().astype(np.float32)
 
-    # Cold items: no training history at all. No collaborative model can reach
-    # them, so they get their own row rather than being silently unreachable.
-    cold = np.where(pop == 0)[0].astype(np.int32)
-
     S = cf.sim_.tocsr()
+    Tn = seq.T_.tocsr()
     os.makedirs(ART, exist_ok=True)
     np.savez_compressed(
         os.path.join(ART, "model.npz"),
         sim_data=S.data, sim_indices=S.indices, sim_indptr=S.indptr,
         sim_shape=np.array(S.shape),
-        pop=pop, cold=cold,
-        alpha=np.array([cf.alpha]), shrink=np.array([cf.shrink]),
-        top_k=np.array([cf.top_k]),
-    )
+        seq_data=Tn.data, seq_indices=Tn.indices, seq_indptr=Tn.indptr,
+        seq_shape=np.array(Tn.shape),
+        pop=pop,
+        weights=np.array([W_CF, W_SEQ, W_POP], dtype=np.float32))
+
     meta = {
-        "model": "item_item",
-        "alpha": cf.alpha, "shrink": cf.shrink, "top_k": cf.top_k,
-        "items": int(X.shape[1]), "players": int(X.shape[0]),
-        "interactions": int(X.nnz),
-        "sim_nnz": int(S.nnz),
-        "cold_items": int(len(cold)),
-        "head_n": HEAD_N,
+        "models": ["item_item", "sequence"],
+        "blend": {"cf": W_CF, "sequence": W_SEQ, "popularity": W_POP},
+        "cf": {"alpha": cf.alpha, "shrink": cf.shrink, "top_k": cf.top_k, "nnz": int(S.nnz)},
+        "sequence": {"alpha": seq.alpha, "shrink": seq.shrink, "top_k": seq.top_k,
+                     "nnz": int(Tn.nnz)},
+        "players": int(X.shape[0]), "items": int(X.shape[1]),
+        "interactions": int(X.nnz), "head_n": HEAD_N,
     }
     with open(os.path.join(ART, "model_report.json"), "w", encoding="utf-8") as fh:
         json.dump(meta, fh, indent=1)
@@ -70,10 +68,13 @@ def train():
 
 def load_model():
     z = np.load(os.path.join(ART, "model.npz"), allow_pickle=False)
-    S = sparse.csr_matrix(
-        (z["sim_data"], z["sim_indices"], z["sim_indptr"]),
-        shape=tuple(z["sim_shape"]))
-    return {"sim": S, "pop": z["pop"], "cold": z["cold"]}
+    S = sparse.csr_matrix((z["sim_data"], z["sim_indices"], z["sim_indptr"]),
+                          shape=tuple(z["sim_shape"]))
+    T = sparse.csr_matrix((z["seq_data"], z["seq_indices"], z["seq_indptr"]),
+                          shape=tuple(z["seq_shape"]))
+    w = z["weights"]
+    return {"sim": S, "seq": T, "pop": z["pop"],
+            "w_cf": float(w[0]), "w_seq": float(w[1]), "w_pop": float(w[2])}
 
 
 if __name__ == "__main__":

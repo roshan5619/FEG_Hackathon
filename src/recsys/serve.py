@@ -1,19 +1,20 @@
 """
-Serving: turn a player id into the rows of a personalised lobby.
+Serving: turn a player id into the rows of a personalised PSK lobby.
 
-The widget set is the product answer to what the evaluation actually found
-(docs/evaluation.md), which is not what we expected going in:
+Row names and structure mirror the live casino.psk.hr lobby (Popularno, Nove
+igre, Jackpoti) so this reads as a feature of that product rather than a
+separate dashboard. Two rows are new and are the point of the work:
+*Nastavi igrati* and *Preporuceno za tebe*.
 
-* Global popularity **beats** collaborative filtering outright on next-game
-  prediction (NDCG@10 0.305 vs 0.056). Players overwhelmingly try what is
-  already popular. So the Trending row stays popularity-driven - the row PSK
-  already ships works, and replacing it would make the lobby worse.
-* Once the global top-50 are removed, that reverses: item-item CF beats
-  popularity **2.25x** on NDCG with **18x** the catalogue coverage (680 games
-  against 37). And **76.5%** of all discovery plays live in that tail.
+The model behind the personalised rows blends day-to-day sequence transitions
+with item-item collaborative filtering, weighted 3:1 in favour of sequence -
+the measured optimum. Sequence carries it: alone it scores 0.0624 NDCG@10 on
+tail discovery against 0.0462 for CF and 0.0205 for popularity.
 
-So the lobby is deliberately hybrid: popularity owns the head, CF owns the
-tail, and neither pretends to do the other's job.
+Popularity is deliberately *not* in the blend but *is* still a row. It wins
+head prediction outright and cannot be improved on there; it simply cannot
+reach the 3,000 games outside the top 50, which is what the personalised rows
+are for.
 
 Every row passes through `responsible.assess` before it is returned. A blocked
 account gets no recommendations at all - not a filtered list, none.
@@ -29,13 +30,9 @@ from src.pipeline.build_dataset import load
 from src.recsys import responsible as rp
 from src.recsys.train import HEAD_N, load_model
 
-DEFAULT_ROW_SIZE = 8
-MAX_PER_PROVIDER = 3         # diversity cap inside a single row
+DEFAULT_ROW_SIZE = 10
+MAX_PER_PROVIDER = 3          # diversity cap inside a recommendation row
 
-
-# Game kinds we can infer from src_game_type, used to label a game we cannot
-# name. "Amusnet slot" is not the title, and the tile says so - but a player
-# recognises their own game from provider and kind, and it is all we truly know.
 _KINDS = [
     ("jackpot", "jackpot slot"), ("slot", "slot"), ("roulette", "roulette"),
     ("blackjack", "blackjack"), ("crash", "crash game"), ("arcade", "arcade game"),
@@ -59,12 +56,13 @@ class Tile:
     game_type: Optional[str]
     score: float
     why: str
-    named: bool = True          # False = provider/kind placeholder, not a real title
+    named: bool = True
+    badges: List[str] = field(default_factory=list)
 
     def as_dict(self) -> Dict[str, Any]:
         return {"code": self.code, "title": self.title, "provider": self.provider,
                 "game_type": self.game_type, "score": round(float(self.score), 5),
-                "why": self.why, "named": self.named}
+                "why": self.why, "named": self.named, "badges": self.badges}
 
 
 @dataclass
@@ -73,11 +71,13 @@ class Row:
     title: str
     subtitle: str
     source: str
+    personalised: bool = False
     tiles: List[Tile] = field(default_factory=list)
 
     def as_dict(self) -> Dict[str, Any]:
         return {"key": self.key, "title": self.title, "subtitle": self.subtitle,
-                "source": self.source, "tiles": [t.as_dict() for t in self.tiles]}
+                "source": self.source, "personalised": self.personalised,
+                "tiles": [t.as_dict() for t in self.tiles]}
 
 
 class LobbyService:
@@ -87,54 +87,94 @@ class LobbyService:
         d = load()
         m = load_model()
         self.X = d["X_train"]
+        self.R = d["X_recent"]
         self.items: List[str] = list(d["items"])
         self.players: List[str] = list(d["players"])
         self.catalog: Dict[str, Dict] = d["catalog"]
-        self.sim = m["sim"]
+        self.sb: Dict[str, Dict] = d.get("sb", {})
+        self.sim, self.seq = m["sim"], m["seq"]
         self.pop = m["pop"]
-        self.cold = set(int(i) for i in m["cold"])
+        self.w_cf, self.w_seq, self.w_pop = m["w_cf"], m["w_seq"], m["w_pop"]
 
+        self.index_of = {c: i for i, c in enumerate(self.items)}
         self.row_of = {p: i for i, p in enumerate(self.players)}
         n = len(self.items)
-
-        # Only nameable games are ever shown. Opaque codes still train the
-        # model; they must never reach a tile.
         self.displayable = np.zeros(n, dtype=bool)
         self.displayable[np.asarray(d["displayable"], dtype=np.int64)] = True
-
+        self.new_items = list(d.get("new_items", []))
+        self.jackpot_items = list(d.get("jackpot_items", []))
         self.head = set(int(i) for i in np.argsort(-self.pop)[:HEAD_N])
-        self.provider_of = [
-            (self.catalog.get(c) or {}).get("provider") for c in self.items]
+        self.provider_of = [(self.catalog.get(c) or {}).get("provider") for c in self.items]
+        self.pop_norm = self.pop / max(self.pop.max(), 1e-9)
 
-    # -- helpers -----------------------------------------------------------
-    def _tile(self, idx: int, score: float, why: str,
-              allow_unnamed: bool = False) -> Optional[Tile]:
-        """
-        Build a tile.
+    # -- scoring -----------------------------------------------------------
+    def _blend(self, urow: int) -> np.ndarray:
+        """The hybrid score: each component max-normalised, then weighted."""
+        def unit(v):
+            mx = v.max()
+            return v / mx if mx > 0 else v
 
-        `allow_unnamed` is granted only to "Continue playing". Reminding someone
-        of a game they already play, labelled by provider and kind, is honest -
-        they recognise it. *Recommending* a game we cannot name would not be:
-        the player has no way to know what they are being offered. That is why
-        the flag exists rather than a global setting.
+        cf = unit(np.asarray((self.X[urow] @ self.sim).todense(), dtype=np.float32).ravel())
+        sq = unit(np.asarray((self.R[urow] @ self.seq).todense(), dtype=np.float32).ravel())
+        out = self.w_cf * cf + self.w_seq * sq
+        if self.w_pop:
+            out = out + self.w_pop * self.pop_norm
+        return out
+
+    def _why(self, urow: int, item: int) -> str:
         """
+        The literal largest contributor to this score - a decomposition, not a
+        generated rationale. Sequence and CF are checked separately so the copy
+        names the signal that actually fired.
+        """
+        played = self.X[urow].indices
+        if len(played) == 0:
+            return "Popularno na PSK-u"
+
+        seq_c = (np.asarray(self.R[urow, played].todense()).ravel()
+                 * np.asarray(self.seq[played, item].todense()).ravel())
+        cf_c = (np.asarray(self.X[urow, played].todense()).ravel()
+                * np.asarray(self.sim[played, item].todense()).ravel())
+        best_seq = float(seq_c.max()) if seq_c.size else 0.0
+        best_cf = float(cf_c.max()) if cf_c.size else 0.0
+        if max(best_seq, best_cf) <= 0:
+            return "Slicno igrama koje igras"
+
+        use_seq = best_seq * self.w_seq >= best_cf * self.w_cf
+        src = int(played[int(np.argmax(seq_c if use_seq else cf_c))])
+        title = (self.catalog.get(self.items[src]) or {}).get("title")
+        if not title:
+            return "Slicno igrama koje igras"
+        return ("Nakon %s igraci cesto igraju ovu" % title) if use_seq \
+            else ("Jer igras %s" % title)
+
+    # -- tiles -------------------------------------------------------------
+    def _badges(self, g: Dict) -> List[str]:
+        out = []
+        if g.get("is_new"):
+            out.append("NOVO")
+        if g.get("has_jackpot"):
+            out.append("JACKPOT")
+        if (g.get("momentum") or 0) >= 2.0:
+            out.append("U PORASTU")
+        return out
+
+    def _tile(self, idx: int, score: float, why: str, allow_unnamed: bool = False):
         code = self.items[idx]
         g = self.catalog.get(code) or {}
         if g.get("displayable") and g.get("title"):
             return Tile(code=code, title=g["title"], provider=g.get("provider"),
-                        game_type=g.get("game_type"), score=score, why=why)
+                        game_type=g.get("game_type"), score=score, why=why,
+                        badges=self._badges(g))
         if not allow_unnamed:
             return None
         prov = g.get("provider")
         kind = _kind_of(g.get("game_type"))
-        title = ("%s %s" % (prov, kind)) if prov else kind.capitalize()
-        return Tile(code=code, title=title, provider=prov,
-                    game_type=g.get("game_type"), score=score,
-                    why="In your history · title not in the catalogue", named=False)
+        return Tile(code=code, title=("%s %s" % (prov, kind)) if prov else kind.capitalize(),
+                    provider=prov, game_type=g.get("game_type"), score=score,
+                    why="U tvojoj povijesti · naziv nije u katalogu", named=False)
 
-    def _take(self, order: np.ndarray, scores: np.ndarray, why_fn, n: int,
-              exclude: set, allow_unnamed: bool = False) -> List[Tile]:
-        """Walk a ranked index list, applying display, diversity and dedup rules."""
+    def _take(self, order, scores, why_fn, n, exclude, allow_unnamed=False):
         out: List[Tile] = []
         per_provider: Dict[Optional[str], int] = {}
         for idx in order:
@@ -144,9 +184,8 @@ class LobbyService:
             if not allow_unnamed and not self.displayable[i]:
                 continue
             prov = self.provider_of[i]
-            # The diversity cap stops one studio owning a recommendation row. It
-            # must not apply to a player's own history - if they only play
-            # Amusnet, that is simply what they play.
+            # The diversity cap stops one studio owning a row. It must not apply
+            # to a player's own history - if they only play Amusnet, so be it.
             if not allow_unnamed and per_provider.get(prov, 0) >= MAX_PER_PROVIDER:
                 continue
             t = self._tile(i, float(scores[i]), why_fn(i), allow_unnamed)
@@ -159,114 +198,90 @@ class LobbyService:
                 break
         return out
 
-    def _cf_scores(self, urow: int) -> np.ndarray:
-        return np.asarray((self.X[urow] @ self.sim).todense(), dtype=np.float32).ravel()
-
-    def _why_because(self, urow: int, item: int) -> str:
-        """The literal top contributor to this score, not a post-hoc story."""
-        played = self.X[urow].indices
-        if len(played) == 0:
-            return "Popular right now"
-        contrib = (np.asarray(self.X[urow, played].todense()).ravel()
-                   * np.asarray(self.sim[played, item].todense()).ravel())
-        if contrib.max() <= 0:
-            return "Similar to games you play"
-        src = self.items[int(played[int(np.argmax(contrib))])]
-        g = self.catalog.get(src) or {}
-        title = g.get("title")
-        return "Because you played %s" % title if title else "Similar to games you play"
-
     # -- the lobby ---------------------------------------------------------
     def lobby(self, player_id: str, player: Optional[Dict[str, Any]] = None,
               row_size: int = DEFAULT_ROW_SIZE) -> Dict[str, Any]:
-        state = rp.assess({"player": player or {}}, _NullFeatures())
-
+        state = rp.assess({"player": player or {}})
         known = player_id in self.row_of
+
         envelope: Dict[str, Any] = {
             "player_id": player_id,
             "known_player": known,
             "responsible_play": state.as_dict(),
-            "rows": [],
-            "suppressed_rows": [],
+            "rows": [], "suppressed_rows": [],
         }
+        if known and player_id in self.sb:
+            envelope["also_bets_sport"] = self.sb[player_id]
 
         if state.blocks_everything:
-            # Nothing from the recommender reaches a blocked account.
-            envelope["rows"] = []
             envelope["suppressed_rows"] = ["all"]
             envelope["required_surfaces"] = state.required_surfaces
             return envelope
 
         rows: List[Row] = []
-        used: set = set()
 
         if known:
             urow = self.row_of[player_id]
             played = set(int(i) for i in self.X[urow].indices)
-            cf = self._cf_scores(urow)
-            cf_order = np.argsort(-cf)
+            score = self._blend(urow)
+            order = np.argsort(-score)
 
-            # 1. Continue playing - their own history, strongest first.
-            own = self.X[urow].toarray().ravel()
-            own_order = np.argsort(-own)
-            # Unnamed games are allowed here and only here: 54% of players have
-            # no nameable game in their history at all, so without this the row
-            # is empty for half the player base.
-            tiles = self._take(own_order[own[own_order] > 0], own,
-                               lambda i: "You have played this", row_size, set(),
+            recent = self.R[urow].toarray().ravel()
+            n_recent = int((recent > 0).sum())
+            tiles = self._take(np.argsort(-recent)[:n_recent], recent,
+                               lambda i: "Nedavno si igrao", row_size, set(),
                                allow_unnamed=True)
             if tiles:
-                rows.append(Row("continue", "Continue playing",
-                                "Games you already play, most-played first",
-                                "user_history", tiles))
+                rows.append(Row("continue", "Nastavi igrati",
+                                "Igre koje si nedavno igrao",
+                                "recency_profile", True, tiles))
 
-            # 2. Because you played X - item-item, explainable, tail-friendly.
             excl = set(played)
-            tiles = self._take(cf_order, cf, lambda i: self._why_because(urow, i),
-                               row_size, excl)
+            tiles = self._take(order, score, lambda i: self._why(urow, i), row_size, excl)
             if tiles:
-                rows.append(Row("because", "Picked for you",
-                                "From players with similar taste",
-                                "item_item_cf", tiles))
+                rows.append(Row("for_you", "Preporuceno za tebe",
+                                "Na temelju onoga sto si igrao",
+                                "sequence+cf", True, tiles))
 
-            # 3. Discover - the same model with the blockbusters removed. This
-            #    is the row the evaluation says CF actually wins.
-            excl2 = set(played) | self.head | {i for r in rows for i in
-                                               [self.items.index(t.code) for t in r.tiles]}
-            tiles = self._take(cf_order, cf,
-                               lambda i: self._why_because(urow, i), row_size, excl2)
+            shown = {self.index_of[t.code] for r in rows for t in r.tiles}
+            excl2 = set(played) | self.head | shown
+            tiles = self._take(order, score, lambda i: self._why(urow, i), row_size, excl2)
             if tiles:
-                rows.append(Row("discover", "Discover something new",
-                                "Beyond the top 50 - where personalisation beats popularity",
-                                "item_item_cf_tail", tiles))
+                rows.append(Row("discover", "Otkrij nesto novo",
+                                "Izvan top 50 – gdje personalizacija pobjeduje",
+                                "sequence+cf_tail", True, tiles))
+
+            jp = sorted((i for i in self.jackpot_items if i not in played),
+                        key=lambda i: -score[i])
+            tiles = self._take(np.asarray(jp, dtype=np.int64), score,
+                               lambda i: "Jackpot igra", row_size, set())
+            if tiles:
+                rows.append(Row("jackpot", "Jackpoti",
+                                "Igre s jackpotom, poredane prema tvom ukusu",
+                                "jackpot+personalised", True, tiles))
         else:
             envelope["cold_start"] = (
                 "Player not in the training window; serving popularity and new "
                 "releases only. A collaborative model cannot personalise without "
                 "history, and pretending otherwise would be dishonest.")
 
-        # 4. Trending - popularity. Kept because it measurably wins the head.
-        pop_order = np.argsort(-self.pop)
-        tiles = self._take(pop_order, self.pop, lambda i: "Popular across PSK",
-                           row_size, set())
+        tiles = self._take(np.argsort(-self.pop), self.pop,
+                           lambda i: "Popularno na PSK-u", row_size, set())
         if tiles:
-            rows.append(Row("trending", "Trending now",
-                            "Most played across all players - the row PSK ships today",
-                            "most_played", tiles))
+            rows.append(Row("popular", "Popularno",
+                            "Najigranije na PSK-u – red koji PSK vec ima",
+                            "most_played", False, tiles))
 
-        # 5. New releases - games with no training history. No CF can reach
-        #    these, and they are 12.1% of all discovery. They need their own row.
-        cold_sorted = sorted(self.cold, key=lambda i: -self.pop[i])
-        tiles = self._take(np.asarray(cold_sorted, dtype=np.int64),
-                           self.pop, lambda i: "New to PSK", row_size, set())
+        new = sorted(self.new_items, key=lambda i: -self.pop[i])
+        tiles = self._take(np.asarray(new, dtype=np.int64), self.pop,
+                           lambda i: "Novo na PSK-u", row_size, set())
         if tiles:
-            rows.append(Row("new", "New releases",
-                            "No play history yet - unreachable by any recommender",
-                            "cold_items", tiles))
+            rows.append(Row("new", "Nove igre",
+                            "Prvi put objavljene u zadnja 3 mjeseca",
+                            "game_age", False, tiles))
 
-        # Responsible play can suppress engagement-driving rows wholesale.
         if state.suppresses_conversion:
-            keep = [r for r in rows if r.key in ("continue",)]
+            keep = [r for r in rows if r.key == "continue"]
             envelope["suppressed_rows"] = [r.key for r in rows if r not in keep]
             rows = keep
 
@@ -274,12 +289,3 @@ class LobbyService:
         if state.required_surfaces:
             envelope["required_surfaces"] = state.required_surfaces
         return envelope
-
-
-class _NullFeatures:
-    """
-    responsible.assess was written against session features. The recommender has
-    no session, so it passes a null object: only the account-level hard gates
-    and the caller-supplied risk flags apply here.
-    """
-    elapsed_s = 0.0

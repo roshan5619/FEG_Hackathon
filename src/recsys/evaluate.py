@@ -40,6 +40,7 @@ from scipy import sparse
 
 from src.pipeline.build_dataset import ART, load
 from src.recsys import baselines as B
+from src.recsys.hybrid import HybridRec, SequenceRec
 from src.recsys.item_item import ItemItemCF
 
 KS = (5, 10, 20)
@@ -172,10 +173,13 @@ def run(displayable_only: bool = False):
         if p:
             item_prov[i] = provs.setdefault(p, len(provs))
 
+    cf = ItemItemCF()
+    seq = SequenceRec(d["T"], d["X_recent"], alpha=0.0)
     models = [
         B.RandomRec(), B.MostPlayed(), B.MostStaked(),
         B.UserTop(), B.ProviderPopular(item_prov),
-        ItemItemCF(),
+        cf, seq,
+        HybridRec(cf, seq, w_cf=1.0, w_seq=3.0, w_pop=0.0),
     ]
 
     results = {}

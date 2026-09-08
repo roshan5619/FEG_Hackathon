@@ -216,3 +216,91 @@ def test_unnamed_games_appear_only_in_continue_playing():
                     assert row["key"] == "continue", (
                         "unnamed game leaked into row %r" % row["key"])
     assert seen_placeholder, "expected at least one placeholder across 40 players"
+
+
+# --------------------------------------------------- sequence & enrichment
+def _artifacts_ready():
+    import os
+    from src.pipeline.build_dataset import ART
+    return os.path.exists(os.path.join(ART, "sequence.npz"))
+
+
+def test_provider_matching_is_prefix_tolerant():
+    """Provider names differ across exports; a studio mismatch must still fail."""
+    from src.pipeline.name_bridge import providers_match
+    assert providers_match("Pragmatic", "PragmaticPlay")
+    assert providers_match("PlayNGo", "Playn Go")
+    assert providers_match("Amusnet", "Amusnet")
+    assert not providers_match("Playtech", "Greentube")
+    assert not providers_match("", "Playtech")
+
+
+def test_bridge_titles_are_not_codes():
+    """A resolved title must be a real name, never another opaque code."""
+    if not _artifacts_ready():
+        pytest.skip("artifacts not built")
+    import json, os, re
+    from src.pipeline.build_dataset import ART
+    with open(os.path.join(ART, "catalog.json"), encoding="utf-8") as fh:
+        cat_json = json.load(fh)
+    bridged = {k: v for k, v in cat_json.items()
+               if v.get("title_source") == "event_log_bridge"}
+    assert bridged, "expected the bridge to have resolved some codes"
+    for code, g in bridged.items():
+        assert g["title"], code
+        assert not re.match(r"^(pop_[0-9a-f]{6,}|gpas_)", g["title"]), code
+        assert g["title_votes"] >= 2, code
+
+
+def test_sequence_model_beats_cf_on_tail_discovery():
+    """
+    The claim that justified building a sequence model at all.
+
+    Session-level sequence was not possible (91 of 26,904 players have event
+    logs). Day-level transitions cover 76% of players, and on the tail they
+    beat both collaborative filtering and popularity.
+    """
+    if not _artifacts_ready():
+        pytest.skip("artifacts not built")
+    import numpy as np
+    from src.pipeline.build_dataset import load
+    from src.recsys.hybrid import SequenceRec
+    from src.recsys.item_item import ItemItemCF
+
+    d = load()
+    X, T, R = d["X_train"], d["T"], d["X_recent"]
+    mask = np.ones(X.shape[1], dtype=bool)
+    seq = evaluate(SequenceRec(T, R).fit(X), X, d["X_test"], "tail_discovery", mask)
+    cf = evaluate(ItemItemCF().fit(X), X, d["X_test"], "tail_discovery", mask)
+    pop = evaluate(MostPlayed().fit(X), X, d["X_test"], "tail_discovery", mask)
+    assert seq["ndcg@10"] > cf["ndcg@10"]
+    assert seq["ndcg@10"] > 2.0 * pop["ndcg@10"]
+
+
+def test_negative_and_zero_stakes_are_excluded():
+    """Refunds and corrections must never become positive interactions."""
+    if not _artifacts_ready():
+        pytest.skip("artifacts not built")
+    import json, os
+    from src.pipeline.build_dataset import ART, load
+    with open(os.path.join(ART, "dataset_report.json"), encoding="utf-8") as fh:
+        report = json.load(fh)
+    dropped = report["dropped"]
+    assert dropped["negative_stake"] > 0 and dropped["zero_stake"] > 0
+    assert load()["X_train"].data.min() > 0, "no interaction may have zero confidence"
+
+
+def test_new_games_row_uses_real_release_age():
+    """
+    "Nove igre" must mean genuinely new, not merely absent from the training
+    window. That distinction needs the 12 months in CA_MOM.
+    """
+    if not _artifacts_ready():
+        pytest.skip("artifacts not built")
+    from src.pipeline.build_dataset import load
+    d = load()
+    assert d["new_items"], "expected some genuinely new games"
+    for i in d["new_items"][:50]:
+        g = d["catalog"][d["items"][i]]
+        assert g.get("is_new") is True
+        assert g.get("displayable") is True

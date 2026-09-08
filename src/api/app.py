@@ -34,10 +34,11 @@ app = FastAPI(
     title="PSK Game Recommender",
     version=__version__,
     description=(
-        "Personalised casino lobby for psk.hr. Popularity owns the head, "
-        "item-item collaborative filtering owns the tail, and responsible-play "
-        "gates run before anything is generated. Team Q'Makers, FEG Innovation "
-        "Challenge 2026."
+        "Personalised casino lobby for psk.hr. Rows are driven by a blend of "
+        "day-to-day play sequence and item-item collaborative filtering; the "
+        "popularity row PSK already ships is kept because it wins the head. "
+        "Responsible-play gates run before anything is generated. "
+        "Team Q'Makers, FEG Innovation Challenge 2026."
     ),
 )
 
@@ -69,12 +70,19 @@ def health() -> Dict[str, Any]:
         "version": __version__,
         "model": model,
         "dataset": {
-            "source": data["source"],
-            "date_range": data["date_range"],
-            "split_date": data["split_date"],
-            "players": data["players_train"],
-            "games_trainable": data["games_trainable"],
-            "games_displayable": data["games_displayable"],
+            "sources": data.get("sources"),
+            "date_range": data.get("date_range"),
+            "split_date": data.get("split_date"),
+            "months_of_history": data.get("months_of_history"),
+            "players": data.get("players"),
+            "games_trainable": data.get("games_trainable"),
+            "games_displayable": data.get("games_displayable"),
+            "games_named_by_bridge": data.get("games_named_by_bridge"),
+            "new_games": data.get("new_games"),
+            "jackpot_games": data.get("jackpot_games"),
+            "sequence_transitions": data.get("sequence_transitions"),
+            "sb_crossover_players": data.get("sb_crossover_players"),
+            "dropped_rows": data.get("dropped"),
         },
         "catalogue_displayable": int(svc.displayable.sum()),
     }
