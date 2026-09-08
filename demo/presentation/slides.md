@@ -20,7 +20,7 @@ A game recommendation system that rebuilds the casino lobby around what each
 player actually plays — their history, their favourites, their next game.
 
 Team Q'Makers · FEG Innovation Challenge 2026 · PSK
-Built on 26,904 players · 3,203 games · 741,679 rows
+Built on 23,673 players · 3,202 games · 741,679 rows · a trained ranker
 
 ---
 
@@ -33,7 +33,7 @@ one game or three hundred.
 | | |
 |---|---|
 | **Search** | The top route to a game — 3,580 launches, ahead of every browsable surface. If you have to type the name, the lobby didn't surface it. |
-| **41** | Games the top row can ever reach, of 3,203. 1.3% of the library, for everyone. |
+| **29–41** | Games the top row can ever reach, of 3,202. ~1% of the library, for everyone. |
 | **0** | Personalised rows today. Widgets exist — top_10, providers, categories — but none adapt to the player. |
 
 ---
@@ -60,7 +60,7 @@ We built and measured both separately.
 Visual: mock lobby with three rows of tiles.
 
 - **Continue playing** — their own history, most-played first
-- **Picked for you** — "Because you played *4 Scarab Coins: Hold and Win*"
+- **Preporučeno za tebe** — "Jer igraš *4 Scarab Coins: Hold and Win*" (trained ranker)
 - **Trending now** — the row PSK ships today, kept
 
 Plus **Discover something new** (the tail) and **New releases** (games with no
@@ -93,25 +93,28 @@ own.
 
 ---
 
-## 6 — The result: but popularity only knows 37 games
+## 6 — The result: but popularity only knows 29 games
 
 Remove the global top-50 — the blockbusters everyone already sees — and the
 result reverses completely.
 
 | Model | NDCG@10 |
 |---|---|
-| **item-item CF** | **0.0462** |
-| provider_popular | 0.0359 |
-| most_played | 0.0205 |
+| **Trained ranker** | **0.0708** |
+| Blend (sequence + CF) | 0.0655 |
+| Sequence | 0.0649 |
+| Item-item CF | 0.0490 |
+| most_played | 0.0165 |
 
 | | |
 |---|---|
-| **2.25×** | Accuracy on the tail vs the popularity baseline |
-| **18×** | Catalogue reached — **680 games** instead of 37 |
+| **4.28×** | Accuracy on the tail vs the popularity baseline |
+| **25×** | Catalogue reached — **732 games** instead of 29 |
 | **76.5%** | Of all discovery lives in that tail |
 
-Holds at top-20 and top-100 boundaries too (1.45× and 2.15×). Not an artefact
-of where the line is drawn.
+The ranker is a scikit-learn logistic regression trained on ~200,000 labelled
+rows. Ordering holds at top-20 and top-100 boundaries — not an artefact of
+where the line is drawn.
 
 ---
 
@@ -119,11 +122,11 @@ of where the line is drawn.
 
 | Row | Source | Why |
 |---|---|---|
-| Trending now | popularity | The incumbent row, kept unchanged because it wins its job |
-| Continue playing | history | Their own games, most-played first. Serves **100%** of players |
-| Picked for you | item-item CF | "Because you played X" — the literal top contributor to the score |
-| Discover something new | item-item CF | The same model with blockbusters removed. Where the 2.25× lives |
-| New releases | cold start | Games with zero history — **12.1%** of discovery, unreachable by any recommender |
+| Popularno | popularity | The incumbent row (*Najigranije*), kept unchanged because it wins its job |
+| Nastavi igrati | recency-weighted history | Their own games, most recent first. Serves **100%** of players |
+| Preporučeno za tebe | trained ranker | "Because you played X" — the literal top contributor to the score |
+| Otkrij nešto novo | trained ranker | Same model, blockbusters removed. Where the 4.28× lives |
+| Nove igre | real release age | **275** titles first released in the last 3 months, from 12 months of history |
 
 The recommender is **additive**. Nothing that already worked was removed, so
 the downside is bounded at screen space — and each row ships behind its own
@@ -152,8 +155,38 @@ auditable.
   never amounts. Stake appears only as a training weight.
 - **No countdowns, no scarcity, no "others are playing", no outcome or
   near-miss framing.**
-- **One chokepoint, covered by tests** — 23 of them, including one that asserts
-  the tail result against the real artifacts.
+- **One chokepoint, covered by tests** — 37 of them, including one asserting the
+  tail result against real artifacts, and one proving `/explain` reconstructs
+  the model's probability exactly.
+
+---
+
+## 8b — The business case, and what we could not prove
+
+**€19.6M — 13.7% of all stake — sits on games a player was trying for the first
+time.** 138,041 first-time adoptions a fortnight, median €16.16 each. That flow
+is served today by a search box and one unchanging row.
+
+**Tail games are not the cheap end:** median stake €17.00 against €10.50 for a
+top-50 game.
+
+**We tested whether broader discovery drives value. It did not survive.**
+
+- Breadth correlates hugely with value (1–2 games €16 → 26+ games €5,446) but
+  is confounded by activity level.
+- Matched on week-3 activity, adopters retain no better — 1 day: 56.8% vs
+  57.6%; 4–7 days: 94.2% vs 96.5%.
+- Adopters stake **less** the next week at every matched band (€200–1,000:
+  €155 vs €246).
+
+**So we make no revenue claim.** The reframe we do make: exploration correlates
+with lower value *because exploration currently fails*. Players hunt and don't
+find. The product's job is not more exploration — it is making the exploration
+they already do succeed.
+
+**The experiment that settles it:** A/B on the lobby, primary metric = first-time
+adoptions **replayed within 7 days**. That separates "found something good" from
+"tried and bounced" — exactly what the failed tests could not.
 
 ---
 
@@ -165,7 +198,7 @@ be recommended, because a player has no way to know what they're being offered.
 
 | | |
 |---|---|
-| **351** | Recommendable catalogue, of 3,202 games |
+| **479** | Recommendable catalogue, of 3,202 games — our name bridge recovered **128** of them from behavioural co-occurrence |
 | **54%** | Players with no named game in their history. Handled honestly: "Amusnet slot", visibly dimmed, marked `named: false` |
 | **~9×** | Unlock if FEG shares a game catalogue |
 
@@ -179,8 +212,8 @@ and it is the only limit here we cannot engineer around.
 
 **Shipped**
 - Pipeline → model → API → dashboard, end to end
-- **~60 ms** per personalised lobby, no model fit at request time
-- **23 tests**, green on a clean clone
+- **~25 ms** per personalised lobby, no model fit at request time
+- **37 tests**, green on a clean clone
 - Six documents including a full evaluation — **with the negative result in it**
 
 **Not built, and said so**
@@ -203,7 +236,7 @@ proxy.
 Today it doesn't. One row, 26,904 players, 41 games.
 
 We measured what personalisation can and can't do here — kept the row that
-already worked, and added the 680 games it could never reach.
+already worked, and added the 732 games it could never reach.
 
 Q'Makers · FEG Innovation Challenge 2026 · `feg-hackathon-2026-QMakers`
 
@@ -216,10 +249,10 @@ is what makes 6 credible. Do not soften it — say "our recommender lost" in
 those words, then explain why we kept the popularity row anyway.
 
 **If you have 90 seconds:** slide 2 (one lobby, 41 games) → slide 5 (we lost) →
-slide 6 (2.25×, 680 games vs 37) → slide 9 (the catalogue ask).
+slide 6 (4.28×, 732 games vs 29) → slide 9 (the catalogue ask).
 
-**Numbers to never round up:** 74%, 78%, 0.305, 0.056, 2.25×, 18×, 76.5%, 54%,
-83%, 23 tests.
+**Numbers to never round up:** 74%, 0.305, 0.056, 0.0708, 4.28×, 25×, 76.5%,
+54%, 83%, 37 tests.
 
 **Expect this question:** *"Isn't 0.046 a tiny NDCG?"* — Yes, in absolute
 terms, and it should be: predicting which of 3,000 games someone tries next

@@ -159,11 +159,12 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
     on next-game prediction, global popularity beat collaborative filtering outright —
     <code>0.305</code> vs <code>0.056</code> NDCG@10. Replacing it would have made the lobby worse.</p>
     <p><strong>Nastavi igrati</strong>, <strong>Preporučeno za tebe</strong>,
-    <strong>Otkrij nešto novo</strong> and <strong>Jackpoti</strong> are personalised. The model blends
-    day-to-day play sequence with item-item collaborative filtering, 3:1 in favour of sequence. On the
-    tail — outside the global top 50, where <code>76.5%</code> of discovery happens — it beats
-    popularity <code>3.06×</code> on NDCG@10 while reaching <code>723</code> games instead of
-    <code>37</code>.</p>
+    <strong>Otkrij nešto novo</strong> and <strong>Jackpoti</strong> are personalised. Item-item
+    collaborative filtering and a day-to-day sequence model propose ~200 candidates; a
+    <strong>trained</strong> scikit-learn logistic regression re-ranks them. On the tail — outside
+    the global top 50, where <code>76.5%</code> of discovery happens — it beats popularity
+    <code>4.28×</code> on NDCG@10 while reaching <code>732</code> games instead of
+    <code>29</code>.</p>
     <p><strong>Nove igre</strong> uses 12 months of history to find titles genuinely first released in
     the last three months — not merely games with no data. Badges come from the same source:
     <code>NOVO</code>, <code>JACKPOT</code>, <code>U PORASTU</code> (rising stake momentum).</p>

@@ -244,7 +244,7 @@ training interactions.
 ### Data
 - **One month** (Aug 2026). No seasonality; the test window is 7 days.
 - **83% of stake is on unnameable games**, so the *recommendable* catalogue is
-  351 of 3,202 and **54% of players have no nameable game in their history**. A
+  479 of 3,202 and **54% of players have no nameable game in their history**. A
   game catalogue from FEG would remove this entirely — **the single
   highest-value thing we could be given.**
 - **12.1% of discovery is unreachable by any CF model** (games with zero
