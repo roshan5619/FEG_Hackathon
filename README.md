@@ -28,11 +28,25 @@ python -m src.cli explain <id>    # one player's lobby, with per-feature reasoni
 python -m src.cli evaluate        # the model comparison table
 ```
 
-Once it is running, two pages matter:
+You land on the **anonymous lobby** — exactly what every psk.hr visitor sees
+today, identical for all 23,673 players. **Sign in** and the same page rebuilds
+from that player's own history.
+
+```bash
+python -m src.cli users           # the 12 demo logins, printed to the terminal
+```
+
+All demo accounts share the password `psk2026`, and the login page lists them
+with one-click fill. Two behave differently on purpose:
+
+| Account | What happens | Why |
+|---|---|---|
+| `davor.z` | **Sign-in refused** | Age/ID unverified. Croatian law requires the check *before* play is allowed |
+| `lucija.h` | **Signs in, zero recommendations** | Self-excluded. Self-exclusion blocks inducements, not account access |
 
 | | |
 |---|---|
-| <http://127.0.0.1:8000/> | **The lobby** — switch player, watch the rows change |
+| <http://127.0.0.1:8000/> | **The lobby** — anonymous before sign-in, personalised after |
 | <http://127.0.0.1:8000/backend> | **The backend** — pipeline, the ranker's learned weights, and per-tile attribution |
 
 On Windows you can also just double-click **`run.bat`**.
@@ -196,6 +210,7 @@ Everything goes through one CLI.
 |---|---|
 | `python -m src.cli demo` | Starts the server **and opens the browser**. The demo path. |
 | `python -m src.cli serve --port 8000` | Server only, no browser |
+| `python -m src.cli users` | The 12 demo logins, with each account's profile and gate |
 | `python -m src.cli status` | What is built, and **the weights the ranker learned** |
 | `python -m src.cli explain <player_id>` | One player's lobby plus the model's per-feature reasoning |
 | `python -m src.cli evaluate` | Model comparison table across all three tasks |
@@ -210,7 +225,10 @@ the server directly.
 
 | URL | What |
 |---|---|
-| <http://127.0.0.1:8000/> | **The personalised lobby** — switch player, toggle responsible-play flags, watch rows change |
+| <http://127.0.0.1:8000/> | **Landing page** when signed out, **the personalised lobby** when signed in |
+| `POST /login` · `POST /logout` · `GET /me` | Demo session. Passwords are PBKDF2-hashed; the cookie is HMAC-signed and `httponly` |
+| <http://127.0.0.1:8000/lobby> | The signed-in player's rows, with their account's gates applied server-side |
+| <http://127.0.0.1:8000/anonymous-lobby> | What a visitor sees before signing in |
 | <http://127.0.0.1:8000/backend> | **The backend view** — pipeline funnel, the three-way split, the ranker's learned coefficients, per-tile attribution, model comparison |
 | <http://127.0.0.1:8000/docs> | Interactive API docs |
 | <http://127.0.0.1:8000/health> | Model provenance, dataset size, catalogue counts |

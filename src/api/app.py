@@ -20,16 +20,20 @@ import json
 import os
 from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Cookie, FastAPI, HTTPException, Query, Response
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
 
 from src import __version__
+from src.api import auth
 from src.pipeline.build_dataset import ART
+from src.recsys import responsible as rp
 from src.recsys.serve import LobbyService
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 DASHBOARD = os.path.join(REPO, "src", "dashboard", "index.html")
 BACKEND = os.path.join(REPO, "src", "dashboard", "backend.html")
+LOGIN = os.path.join(REPO, "src", "dashboard", "login.html")
 
 app = FastAPI(
     title="PSK Game Recommender",
@@ -212,6 +216,102 @@ def profile(player_id: str, top: int = Query(12, ge=1, le=50)) -> Dict[str, Any]
     }
 
 
+# ------------------------------------------------------------------- auth
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/login")
+def login(req: LoginRequest, response: Response) -> Dict[str, Any]:
+    """
+    Sign in to the demo.
+
+    The age/ID gate lives HERE, not in the lobby. Croatia's Act on Measures for
+    Socially Responsible Organisation of Games of Chance requires the check
+    before play is allowed, so an unverified account is refused a session
+    entirely rather than issued one and filtered afterwards.
+
+    Self-exclusion is deliberately NOT checked here: a self-excluded person must
+    still reach their account and support. Their lobby returns zero
+    recommendations instead - see src/recsys/responsible.py.
+    """
+    user = auth.authenticate(req.username, req.password)
+    if user is None:
+        # Identical message either way: never reveal whether a username exists.
+        raise HTTPException(401, "Neispravno korisnicko ime ili lozinka.")
+
+    flags = auth.player_flags(user)
+    state = rp.assess({"player": flags})
+    if state.hard_gate and not flags.get("self_excluded"):
+        raise HTTPException(403, {
+            "message": "Prijava odbijena: provjera dobi/identiteta nije prosla.",
+            "state": state.state,
+            "reasons": state.reasons,
+            "required_surfaces": state.required_surfaces,
+        })
+
+    response.set_cookie(
+        auth.COOKIE_NAME, auth.issue_session(user["username"]),
+        max_age=auth.SESSION_TTL_SECONDS, httponly=True, samesite="lax")
+    return {"ok": True, "user": auth.public_user(user)}
+
+
+@app.post("/logout")
+def logout(response: Response) -> Dict[str, Any]:
+    response.delete_cookie(auth.COOKIE_NAME)
+    return {"ok": True}
+
+
+@app.get("/me")
+def me(psk_demo_session: Optional[str] = Cookie(default=None)) -> Dict[str, Any]:
+    """Who is signed in, if anyone. Drives both pages."""
+    user = auth.read_session(psk_demo_session)
+    if user is None:
+        return {"authenticated": False}
+    return {"authenticated": True, "user": auth.public_user(user)}
+
+
+@app.get("/demo-accounts")
+def demo_accounts() -> Dict[str, Any]:
+    """
+    The demo credentials, for the login page to display.
+
+    Safe to expose: invented personas over anonymous ids on a prototype, and a
+    judge cannot guess them. Never includes a salt or a hash.
+    """
+    store = auth.users()
+    return {
+        "password": auth.DEMO_PASSWORD,
+        "note": store.get("_readme"),
+        "accounts": [auth.public_user(u) for u in store.get("users", [])],
+    }
+
+
+@app.get("/lobby")
+def lobby(psk_demo_session: Optional[str] = Cookie(default=None),
+          row_size: int = Query(10, ge=1, le=20)) -> Dict[str, Any]:
+    """
+    The signed-in player's lobby.
+
+    Responsible-play flags come from the account record server-side, never from
+    query parameters, so a browser cannot talk itself out of a gate.
+    """
+    user = auth.read_session(psk_demo_session)
+    if user is None:
+        raise HTTPException(401, "Not signed in.")
+    out = service().lobby(user["player_id"],
+                          player=auth.player_flags(user), row_size=row_size)
+    out["user"] = auth.public_user(user)
+    return out
+
+
+@app.get("/anonymous-lobby")
+def anonymous_lobby(row_size: int = Query(10, ge=1, le=20)) -> Dict[str, Any]:
+    """What a visitor who has not signed in sees. Identical for everyone."""
+    return service().lobby("__anonymous__", row_size=row_size)
+
+
 @app.get("/backend", include_in_schema=False)
 def backend_view():
     """The visualisations: pipeline, learned weights, per-tile attribution."""
@@ -222,7 +322,10 @@ def backend_view():
 
 
 @app.get("/", include_in_schema=False)
-def dashboard():
-    if os.path.exists(DASHBOARD):
-        return FileResponse(DASHBOARD, media_type="text/html")
-    return JSONResponse({"detail": "dashboard not built", "try": "/docs"}, status_code=404)
+def root(psk_demo_session: Optional[str] = Cookie(default=None)):
+    """Landing page when signed out; the personalised lobby when signed in."""
+    signed_in = auth.read_session(psk_demo_session) is not None
+    page = DASHBOARD if signed_in else LOGIN
+    if os.path.exists(page):
+        return FileResponse(page, media_type="text/html")
+    return JSONResponse({"detail": "page not built", "try": "/docs"}, status_code=404)

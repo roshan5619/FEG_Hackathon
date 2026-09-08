@@ -72,6 +72,15 @@ checkbox**. That distinction drove our order of operations.
   configuration can relax them.
 - Age verification is checked at *any* entry point, not only registration —
   `tests/test_recsys.py::test_unverified_age_is_a_hard_gate`.
+- **The demo puts the two gates where the law puts them, and they differ.**
+  An age/ID-unverified account is **refused sign-in entirely** and never
+  receives a session, because the check must precede play. A self-excluded
+  account **signs in successfully** — self-exclusion blocks inducements, not
+  account access, and the person must still reach their account and support —
+  but their lobby returns zero recommendations plus the required surfaces.
+  Both directions are asserted:
+  `tests/test_auth.py::test_age_unverified_is_refused_a_session` and
+  `::test_self_excluded_signs_in_but_gets_nothing_to_play`.
 
 Data protection is supervised nationally by **AZOP**; AML/KYC by the
 Anti-Money-Laundering Office under the Ministry of Finance. Croatia has adopted
@@ -175,6 +184,16 @@ opt-in — never pre-ticked.
 ---
 
 ## 7. Data handling in this repository
+
+**Demo accounts.** `src/api/demo_users.json` holds 12 prototype logins. The
+usernames and display names (`ana.k`, `Ana K.`) are **invented labels** attached
+to pre-hashed anonymous player identifiers. The export contains no name, age,
+gender, location or any other personal attribute, so none can be revealed. The
+*play history* behind each account is real; the person is not. Passwords are
+stored only as PBKDF2-SHA256 hashes with per-user salts — no plaintext
+credential exists in the repository — and the session cookie is HMAC-signed,
+`httponly` and expiring. This is prototype auth: no rate limiting, no lockout,
+no rotation, no MFA, and it is not proposed as production authentication.
 
 **Committed:** `artifacts/catalog.json` (game codes and parsed names),
 `interactions.npz` (the sparse matrix, keyed by pre-hashed ids), `model.npz`

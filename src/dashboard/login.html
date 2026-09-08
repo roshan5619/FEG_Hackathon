@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PSK Casino — Prijava (prototip)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --plane:#0a0e14; --surface:#141a23; --raise:#1c242f; --sunk:#10151c;
+  --ink:#fff; --ink2:#b6c1d0; --muted:#7c8898;
+  --line:rgba(255,255,255,.10); --rule:#28313d;
+  --accent:#3987e5; --gold:#e8b23a; --green:#199e70; --red:#e0564f; --warn:#fab219;
+  --sans:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1340px;margin:0 auto;padding:0 20px}
+h1,h2,h3,p{margin:0}
+button,select,input{font-family:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+code{font-family:var(--mono);font-size:.87em;background:var(--raise);padding:1px 5px;border-radius:3px}
+
+/* the banner is permanent and unmissable: this must never be mistaken for
+   a real PSK sign-in page */
+.proto{background:var(--warn);color:#0a0e14;font-weight:700;font-size:12.5px;
+  text-align:center;padding:7px 20px;letter-spacing:.01em}
+
+.topnav{background:#0d1218;border-bottom:1px solid var(--line)}
+.topnav-in{display:flex;align-items:center;gap:6px;height:52px;overflow-x:auto}
+.logo{font-weight:800;font-size:19px;letter-spacing:-.02em;margin-right:14px;white-space:nowrap}
+.logo span{color:var(--accent)}
+.topnav a{color:var(--ink2);text-decoration:none;font-size:13.5px;font-weight:500;
+  padding:7px 12px;border-radius:4px;white-space:nowrap}
+.topnav a.on{background:var(--raise);color:var(--ink)}
+
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:26px;padding:26px 0 6px}
+@media (max-width:940px){.hero{grid-template-columns:minmax(0,1fr)}}
+
+.pitch h1{font-size:clamp(24px,3.4vw,34px);line-height:1.14;letter-spacing:-.025em;
+  font-weight:800;max-width:20ch;text-wrap:balance}
+.pitch p{color:var(--ink2);font-size:14.5px;margin-top:12px;max-width:58ch}
+.same{margin-top:16px;padding:12px 16px;border-radius:6px;font-size:13.5px;
+  background:rgba(224,86,79,.10);border:1px solid rgba(224,86,79,.35)}
+.same b{display:block;margin-bottom:3px}
+.same span{color:var(--ink2);font-size:12.5px}
+
+/* login card */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:22px}
+.card h2{font-size:17px;font-weight:700;margin-bottom:4px}
+.card .sub{font-size:12.5px;color:var(--muted);margin-bottom:16px}
+label.f{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);margin:0 0 5px}
+input[type=text],input[type=password]{width:100%;background:var(--raise);color:var(--ink);
+  border:1px solid var(--rule);border-radius:6px;padding:10px 12px;font-size:14px;outline:none}
+input:focus{border-color:var(--accent)}
+.field{margin-bottom:13px}
+button.primary{width:100%;background:var(--accent);color:#fff;border:0;border-radius:6px;
+  padding:11px 14px;font-size:14.5px;font-weight:700;cursor:pointer}
+button.primary:hover{filter:brightness(1.08)}
+button.primary:disabled{opacity:.6;cursor:default}
+.err{margin-top:12px;padding:11px 13px;border-radius:6px;font-size:13px;
+  background:rgba(224,86,79,.12);border:1px solid rgba(224,86,79,.45)}
+.err b{display:block;margin-bottom:4px}
+.err ul{margin:7px 0 0;padding-left:18px;color:var(--ink2);font-size:12.5px}
+
+/* credential list */
+.creds{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+.creds .h{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:9px}
+.creds .pw{font-size:12.5px;color:var(--ink2);margin-bottom:10px}
+.acct{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center;
+  width:100%;background:var(--raise);border:1px solid var(--rule);border-radius:6px;
+  padding:8px 11px;margin-bottom:6px;cursor:pointer;text-align:left;color:var(--ink)}
+.acct:hover{border-color:var(--accent)}
+.acct .u{font-family:var(--mono);font-size:12px}
+.acct .d{font-size:11px;color:var(--muted);grid-column:1/-1;margin-top:-2px}
+.tag{font-family:var(--mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;
+  padding:2px 6px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
+.tag.NORMAL{color:var(--muted)} .tag.MODERATE{color:var(--warn)}
+.tag.BLOCKED{color:var(--red)} .tag.AGE_UNVERIFIED{color:var(--red)}
+
+/* anonymous lobby preview */
+.rowsec{margin:26px 0 0}
+.rhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-bottom:11px}
+.rhead h2{font-size:18px;font-weight:700;letter-spacing:-.015em}
+.rhead .sub{font-size:12.5px;color:var(--muted)}
+.rhead .pers{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:3px;border:1px solid currentColor;color:var(--muted)}
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:172px;gap:11px;overflow-x:auto;
+  padding-bottom:10px}
+.strip::-webkit-scrollbar{height:7px}
+.strip::-webkit-scrollbar-thumb{background:var(--rule);border-radius:4px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:7px;overflow:hidden;
+  display:flex;flex-direction:column}
+.art{height:104px;position:relative;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:27px;font-weight:600;color:rgba(255,255,255,.88)}
+.art::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.5))}
+.badges{position:absolute;top:6px;left:6px;display:flex;gap:4px;z-index:2}
+.bdg{font-family:var(--mono);font-size:8px;font-weight:600;padding:2px 5px;border-radius:2px;
+  background:var(--muted);color:#0a0e14}
+.bdg.NOVO{background:var(--green);color:#fff}
+.bdg.JACKPOT{background:var(--gold)}
+.bdg.UPORASTU{background:var(--accent);color:#fff}
+.tbody{padding:8px 10px 9px;display:flex;flex-direction:column;gap:2px}
+.tname{font-size:12px;font-weight:600;line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tprov{font-family:var(--mono);font-size:9px;color:var(--muted)}
+
+.note{margin:32px 0 0;padding:17px 19px;background:var(--sunk);border:1px solid var(--line);
+  border-left:2px solid var(--accent);border-radius:6px}
+.note b{display:block;font-size:13.5px;margin-bottom:6px}
+.note p{margin:0 0 8px;color:var(--ink2);font-size:12.5px;max-width:88ch}
+.note p:last-child{margin-bottom:0}
+footer{padding:24px 0 44px;color:var(--muted);font-size:11.5px;max-width:92ch}
+.loading{padding:30px 0;color:var(--muted);font-family:var(--mono);font-size:12.5px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="proto">PROTOTIP · Q'Makers · FEG Innovation Challenge 2026 · nije povezano s PSK-om · demo podaci</div>
+
+<div class="topnav"><div class="wrap"><nav class="topnav-in">
+  <div class="logo">PSK<span>.</span></div>
+  <a href="#">Sport</a><a href="#">Uživo</a><a href="#" class="on">Casino</a>
+  <a href="#">Live Casino</a><a href="#">Loto</a><a href="#">Virtualne igre</a>
+</nav></div></div>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="pitch">
+      <h1>Ovo je lobi koji vide svi.</h1>
+      <p>Isti redovi, isti raspored, iste igre — za svih <b>23.673</b> igrača, bez obzira jesu li
+      odigrali jednu igru ili tri stotine. Glavni red doseže <b>29</b> igara od 3.202.</p>
+      <div class="same">
+        <b>Prijavi se i pogledaj razliku.</b>
+        <span>Nakon prijave isti ovaj ekran gradi se iz tvoje stvarne povijesti igranja —
+        trenirani model preporučuje iz 732 igre umjesto 29.</span>
+      </div>
+    </div>
+
+    <form class="card" id="loginForm" autocomplete="off">
+      <h2>Prijava</h2>
+      <div class="sub">Demo račun — odaberi ispod ili upiši ručno</div>
+      <div class="field">
+        <label class="f" for="u">Korisničko ime</label>
+        <input type="text" id="u" name="username" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label class="f" for="p">Lozinka</label>
+        <input type="password" id="p" name="password" autocomplete="off">
+      </div>
+      <button class="primary" type="submit" id="go">Prijavi se</button>
+      <div id="err"></div>
+
+      <div class="creds">
+        <div class="h">Demo računi — klikni za popunjavanje</div>
+        <div class="pw" id="pw"></div>
+        <div id="accts"><div class="loading">učitavanje…</div></div>
+      </div>
+    </form>
+  </div>
+
+  <div id="anon"><div class="loading">učitavanje lobija…</div></div>
+
+  <div class="note">
+    <b>O ovim računima / About these accounts</b>
+    <p><strong>The usernames and display names are invented labels.</strong> They are attached to
+    pre-hashed anonymous player identifiers from the FEG sample. The export contains no name, age,
+    gender, location or any other personal attribute — so none can be revealed here. The
+    <em>play history</em> behind each account is real; the person is not.</p>
+    <p><strong>Passwords are stored as PBKDF2-SHA256 hashes with per-user salts</strong> — no
+    plaintext credential exists in the repository. The session cookie is HMAC-signed,
+    <code>httponly</code> and expiring. This is prototype auth: no rate limiting, lockout, rotation
+    or MFA, and <code>docs/compliance-note.md</code> says so.</p>
+    <p><strong>Two accounts demonstrate the responsible-play gates, and they behave differently on
+    purpose.</strong> <code>davor.z</code> has unverified age and is <em>refused sign-in</em> —
+    Croatia's Act on Measures for Socially Responsible Organisation of Games of Chance requires the
+    check before play is allowed. <code>lucija.h</code> is self-excluded and <em>can</em> sign in —
+    self-exclusion blocks inducements, not account access — but receives zero recommendations and
+    the required support surfaces instead.</p>
+  </div>
+
+  <footer>
+    Anonimizirani FEG uzorak · nema osobnih podataka · ova stranica ne prikuplja i ne šalje ništa
+    izvan lokalnog poslužitelja.
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s){return document.querySelector(s);};
+  function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+  function hue(s){var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h%360;}
+  function tile(t){
+    var d=el("div","tile"),h=hue(t.title),a=el("div","art");
+    a.style.background="linear-gradient(140deg,hsl("+h+" 45% 32%),hsl("+((h+40)%360)+" 48% 18%))";
+    if(t.badges&&t.badges.length){
+      var b=el("div","badges");
+      t.badges.forEach(function(x){b.appendChild(el("span","bdg "+x.replace(/\s+/g,""),esc(x)));});
+      a.appendChild(b);
+    }
+    a.appendChild(document.createTextNode(t.title.replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase()));
+    d.appendChild(a);
+    var b2=el("div","tbody");
+    b2.appendChild(el("div","tname",esc(t.title)));
+    b2.appendChild(el("div","tprov",esc(t.provider||"—")));
+    d.appendChild(b2); return d;
+  }
+
+  // the anonymous lobby - exactly what a visitor sees today
+  fetch("/anonymous-lobby").then(function(r){return r.json();}).then(function(d){
+    var host=$("#anon"); host.textContent="";
+    (d.rows||[]).forEach(function(r){
+      var sec=el("section","rowsec"),h=el("div","rhead");
+      h.appendChild(el("h2",null,esc(r.title)));
+      h.appendChild(el("span","sub",esc(r.subtitle)));
+      h.appendChild(el("span","pers","globalno — isto za sve"));
+      sec.appendChild(h);
+      var strip=el("div","strip");
+      r.tiles.forEach(function(t){strip.appendChild(tile(t));});
+      sec.appendChild(strip); host.appendChild(sec);
+    });
+  }).catch(function(){ $("#anon").innerHTML='<div class="loading">API nije dostupan.</div>'; });
+
+  // demo credentials
+  fetch("/demo-accounts").then(function(r){return r.json();}).then(function(d){
+    $("#pw").innerHTML="Lozinka za sve račune: <code>"+esc(d.password)+"</code>";
+    var host=$("#accts"); host.textContent="";
+    (d.accounts||[]).forEach(function(a){
+      var b=el("button","acct"); b.type="button";
+      var p=a.profile||{};
+      b.appendChild(el("span","u",esc(a.username)));
+      b.appendChild(el("span","tag "+esc(a.rg_state),esc(a.rg_state.replace("_"," "))));
+      b.appendChild(el("span","d", esc(a.display_name)+" · "+(p.games_played||0)+" igara, "+
+        (p.named_games||0)+" poznatih"+(p.also_bets_sport?" · klada "+esc(p.also_bets_sport):"")));
+      b.addEventListener("click",function(){
+        $("#u").value=a.username; $("#p").value=d.password; $("#err").textContent=""; $("#u").focus();
+      });
+      host.appendChild(b);
+    });
+  }).catch(function(){ $("#accts").innerHTML='<div class="loading">—</div>'; });
+
+  $("#loginForm").addEventListener("submit",function(e){
+    e.preventDefault();
+    var btn=$("#go"); btn.disabled=true; $("#err").textContent="";
+    fetch("/login",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({username:$("#u").value,password:$("#p").value})})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,status:r.status,body:j}; }); })
+      .then(function(res){
+        if(res.ok){ window.location.href="/"; return; }
+        btn.disabled=false;
+        var d=res.body.detail, box=el("div","err");
+        if(d && typeof d==="object"){
+          box.appendChild(el("b",null,esc(d.message||"Prijava odbijena")));
+          (d.reasons||[]).forEach(function(x){ box.appendChild(el("div",null,esc(x))); });
+          if((d.required_surfaces||[]).length){
+            var ul=el("ul");
+            d.required_surfaces.forEach(function(x){ ul.appendChild(el("li",null,esc(x))); });
+            box.appendChild(el("div",null,"Obavezno prikazati:")); box.appendChild(ul);
+          }
+        } else {
+          box.appendChild(el("b",null,esc(d||"Prijava nije uspjela")));
+        }
+        $("#err").textContent=""; $("#err").appendChild(box);
+      })
+      .catch(function(){ btn.disabled=false; $("#err").innerHTML='<div class="err">Poslužitelj nije dostupan.</div>'; });
+  });
+})();
+</script>
+</body>
+</html>

@@ -8,6 +8,7 @@ One entry point for the whole system.
     python -m src.cli build --data-dir DIR    # rebuild artifacts from the FEG CSVs
     python -m src.cli train                   # refit models and the ranker
     python -m src.cli all   --data-dir DIR    # build, train, evaluate, serve
+    python -m src.cli users                   # the 12 demo logins
     python -m src.cli status                  # what is built, what it contains
 
 `demo`, `serve`, `explain`, `evaluate` and `status` all run from the committed
@@ -73,6 +74,33 @@ def cmd_status(args):
             for f in r["features"][:8]:
                 bar = "#" * int(min(abs(f["weight"]) * 40, 40))
                 print("    %-20s %+7.3f %s" % (f["name"], f["weight"], bar))
+
+
+def cmd_users(args):
+    """Print the demo logins, so they are in front of you while presenting."""
+    from src.api import auth
+    store = auth.users()
+    accounts = store.get("users", [])
+    if not accounts:
+        sys.exit("No demo accounts. Run:  python -m src.api.make_demo_users")
+    print(BANNER)
+    print(_rule())
+    print("  Password for every account:  %s" % auth.DEMO_PASSWORD)
+    print()
+    print("  %-12s %-14s %6s %6s %-15s %s"
+          % ("username", "name", "games", "named", "responsible play", "top game"))
+    print("  " + _rule("-", 92))
+    for u in accounts:
+        p = u.get("profile") or {}
+        print("  %-12s %-14s %6d %6d %-15s %s"
+              % (u["username"], u["display_name"], p.get("games_played", 0),
+                 p.get("named_games", 0), u.get("rg_label", "NORMAL"),
+                 str(p.get("top_game", ""))[:32]))
+    print()
+    print("  Two accounts behave differently on purpose:")
+    print("    age-unverified  -> sign-in REFUSED (the check precedes play)")
+    print("    self-excluded   -> sign-in SUCCEEDS, lobby returns zero rows")
+    print("                       (self-exclusion blocks inducements, not account access)")
 
 
 def cmd_build(args):
@@ -174,7 +202,23 @@ def cmd_demo(args):
     print("  %s players · %s games · %s displayable · %s interactions"
           % (format(r["players"], ","), r["games_trainable"], r["games_displayable"],
              format(r["interactions_fit"], ",")))
-    print("  Opening the lobby. Switch player to see the rows change.")
+    try:
+        from src.api import auth
+        accounts = auth.users().get("users", [])
+        if accounts:
+            print()
+            print("  DEMO LOGINS  (password for all: %s)" % auth.DEMO_PASSWORD)
+            for u in accounts:
+                p = u.get("profile") or {}
+                tag = "" if u.get("rg_label") == "NORMAL" else ("   <- %s" % u["rg_label"])
+                print("    %-12s %-14s %4d games, %3d named%s"
+                      % (u["username"], u["display_name"], p.get("games_played", 0),
+                         p.get("named_games", 0), tag))
+    except Exception:
+        pass
+    print()
+    print("  You will land on the ANONYMOUS lobby - what every visitor sees today.")
+    print("  Sign in and the same page rebuilds from that player's history.")
     _serve(args.port, open_browser=True)
 
 
@@ -216,6 +260,9 @@ def main():
     p = sub.add_parser("demo", help="run and open the browser")
     p.add_argument("--port", type=int, default=8000)
     p.set_defaults(func=cmd_demo)
+
+    p = sub.add_parser("users", help="the demo logins")
+    p.set_defaults(func=cmd_users)
 
     p = sub.add_parser("status", help="what is built")
     p.set_defaults(func=cmd_status)

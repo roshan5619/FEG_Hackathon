@@ -50,6 +50,27 @@ button,select,input{font-family:inherit}
 .search input{background:none;border:0;color:var(--ink);font-size:13px;width:100%;outline:none}
 .search input::placeholder{color:var(--muted)}
 
+/* Permanent, unmissable: this must never read as a real PSK session. */
+.proto{background:var(--warn);color:#0a0e14;font-weight:700;font-size:12.5px;
+  text-align:center;padding:7px 20px}
+.who{display:flex;align-items:center;gap:9px;margin-left:auto}
+.who .av{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.who .nm{font-size:13px;font-weight:600;line-height:1.15}
+.who .sm{font-family:var(--mono);font-size:9.5px;color:var(--muted);display:block}
+.who button{background:var(--raise);color:var(--ink2);border:1px solid var(--rule);
+  border-radius:5px;padding:6px 11px;font-size:12px;cursor:pointer}
+.who button:hover{color:var(--ink);border-color:var(--accent)}
+.rgnote{margin:14px 0 0;padding:11px 15px;border-radius:6px;font-size:13px;
+  background:rgba(250,178,25,.10);border:1px solid rgba(250,178,25,.40)}
+.rgnote.blocked{background:rgba(224,86,79,.12);border-color:rgba(224,86,79,.5)}
+details.ctl{margin-left:auto}
+details.ctl summary{font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);cursor:pointer;list-style:none}
+details.ctl summary::-webkit-details-marker{display:none}
+details.ctl summary:hover{color:var(--ink2)}
+details.ctl[open] summary{color:var(--ink2);margin-bottom:9px}
+
 .demo{background:var(--sunk);border-bottom:1px solid var(--line)}
 .demo-in{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:11px 0}
 .demo .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
@@ -123,11 +144,13 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
 </head>
 <body>
 
+<div class="proto">PROTOTIP · Q'Makers · FEG Innovation Challenge 2026 · nije povezano s PSK-om · demo podaci</div>
+
 <div class="topnav"><div class="wrap"><nav class="topnav-in">
   <div class="logo">PSK<span>.</span></div>
   <a href="#">Sport</a><a href="#">Uživo</a><a href="#" class="on">Casino</a>
   <a href="#">Live Casino</a><a href="#">Loto</a><a href="#">Virtualne igre</a><a href="#">Promo</a>
-  <span class="mock">Prototip · nije povezano s PSK</span>
+  <div class="who" id="who"></div>
 </nav></div></div>
 
 <div class="subnav"><div class="wrap"><div class="subnav-in">
@@ -143,10 +166,11 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
 </div></div></div>
 
 <div class="demo"><div class="wrap"><div class="demo-in">
-  <span class="lbl">Prijavljen kao</span>
-  <select class="player" id="player"><option>učitavanje…</option></select>
-  <span class="lbl">Simulacija zaštite igrača</span>
-  <div id="toggles" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+  <span class="lbl" id="profileLine">učitavanje…</span>
+  <details class="ctl">
+    <summary>Demo kontrole zaštite igrača ▾</summary>
+    <div id="toggles" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+  </details>
 </div></div></div>
 
 <div class="wrap">
@@ -189,7 +213,10 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
 
   var FLAGS=[["self_excluded","Samoisključen"],["chasing_losses","Juri gubitke"],
              ["stake_above_own_history","Ulog iznad prosjeka"]];
-  var state={player:null,flags:{},deposits:0};
+  // `player` comes from the signed-in session, never from a picker. The flags
+  // below only ADD to whatever the account already carries server-side; they
+  // cannot switch a gate off.
+  var state={player:null,flags:{},deposits:0,user:null};
 
   function hue(s){ var h=0; for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return h%360; }
   function art(t,badges){
@@ -268,9 +295,19 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
   function load(){
     if(!state.player) return;
     $("#rows").innerHTML='<div class="loading">Učitavanje lobija…</div>';
-    fetch("/recommendations/"+encodeURIComponent(state.player)+"?"+query())
-      .then(function(r){ return r.json(); }).then(render)
-      .catch(function(e){ $("#rows").innerHTML='<div class="panel"><h3>Greška</h3><p>'+esc(e.message)+'</p></div>'; });
+    var q=query();
+    // With no demo overrides, use /lobby so the account's own flags apply
+    // server-side. With overrides, use /recommendations to layer them on.
+    var url = q ? ("/recommendations/"+encodeURIComponent(state.player)+"?"+q) : "/lobby";
+    fetch(url,{credentials:"same-origin"})
+      .then(function(r){
+        if(r.status===401){ window.location.href="/"; throw new Error("signed out"); }
+        return r.json();
+      }).then(render)
+      .catch(function(e){
+        if(e.message==="signed out") return;
+        $("#rows").innerHTML='<div class="panel"><h3>Greška</h3><p>'+esc(e.message)+'</p></div>';
+      });
   }
 
   var tg=$("#toggles");
@@ -288,19 +325,42 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
     l.appendChild(document.createTextNode("Uplata u sesiji")); l.appendChild(s); tg.appendChild(l);
   })();
 
-  fetch("/players?limit=20").then(function(r){ return r.json(); }).then(function(d){
-    var sel=$("#player"); sel.textContent="";
-    (d.players||[]).forEach(function(p,i){
-      var o=el("option",null,"Igrač "+String(i+1).padStart(2,"0")+
-        " · "+p.named_games+" poznatih / "+p.games_played+" igara");
-      o.value=p.player_id; sel.appendChild(o);
+  function renderWho(u){
+    var host=$("#who"); host.textContent="";
+    var av=el("div","av",esc((u.display_name||"?").trim()[0].toUpperCase()));
+    var nm=el("div","nm", esc(u.display_name)+
+      '<span class="sm">'+esc(u.username)+"</span>");
+    var out=el("button",null,"Odjava");
+    out.addEventListener("click",function(){
+      fetch("/logout",{method:"POST",credentials:"same-origin"})
+        .then(function(){ window.location.href="/"; });
     });
-    sel.addEventListener("change",function(){ state.player=sel.value; load(); });
-    if(sel.options.length){ state.player=sel.options[0].value; load(); }
-  }).catch(function(){
-    $("#rows").innerHTML='<div class="panel"><h3>API nije dostupan</h3><p>Pokreni '+
-      '<code>uvicorn src.api.app:app --port 8000</code> i osvježi stranicu.</p></div>';
-  });
+    host.appendChild(av); host.appendChild(nm); host.appendChild(out);
+
+    var p=u.profile||{};
+    $("#profileLine").textContent =
+      p.games_played+" igara u povijesti · "+p.named_games+" s poznatim nazivom"+
+      (p.also_bets_sport?(" · klada "+p.also_bets_sport):"")+
+      (p.top_game?(" · najviše: "+p.top_game):"");
+
+    if(u.note){
+      var n=el("div","rgnote"+(u.rg_state==="BLOCKED"?" blocked":""),
+        "<b>"+esc(u.rg_state)+"</b> "+esc(u.note));
+      $("#status").parentNode.insertBefore(n,$("#status"));
+    }
+  }
+
+  fetch("/me",{credentials:"same-origin"}).then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.authenticated){ window.location.href="/"; return; }
+      state.user=d.user; state.player=d.user.player_id;
+      renderWho(d.user);
+      load();
+    })
+    .catch(function(){
+      $("#rows").innerHTML='<div class="panel"><h3>API nije dostupan</h3><p>Pokreni '+
+        '<code>python -m src.cli demo</code> i osvježi stranicu.</p></div>';
+    });
 })();
 </script>
 </body>

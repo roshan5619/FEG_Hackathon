@@ -1,0 +1,217 @@
+{
+ "_readme": "Demo accounts for the PSK recommender prototype. Usernames and display names are INVENTED LABELS attached to pre-hashed anonymous player identifiers; the export contains no personal attribute of any kind, so none is revealed here. The play history behind each account is real. Passwords are PBKDF2-SHA256 hashes with per-user salts - no plaintext is stored. This is prototype auth, not production auth: no rate limiting, lockout, rotation or MFA.",
+ "password_hint": "All demo accounts share one password, shown on the login page.",
+ "users": [
+  {
+   "username": "ana.k",
+   "display_name": "Ana K.",
+   "player_id": "194af2cb77a5f84c6b72daf3c8f6d7e41789c219aaeae409cf900cb50eb54bb1",
+   "salt": "6e8774b3569402e71b9afbc23fc328c9",
+   "hash": "580d615be9d868fb8c9ad192ad291b4179d583aa164d0290a5c6583ebe0ceaf6",
+   "rounds": "120000",
+   "profile": {
+    "games_played": 177,
+    "named_games": 76,
+    "top_game": "(naziv nije u katalogu)",
+    "also_bets_sport": null
+   },
+   "flags": {},
+   "rg_label": "NORMAL",
+   "note": null
+  },
+  {
+   "username": "marko.p",
+   "display_name": "Marko P.",
+   "player_id": "075593165b38fdc252fe61352dd501965ecdb41c9c8da80a93165dc2ba869e03",
+   "salt": "29db2ccd11afc97c248f751db6029fde",
+   "hash": "e69eafe081b2b3eb275ca92ca0f0f6591bb15fcb20e6b140a5c37835ca251788",
+   "rounds": "120000",
+   "profile": {
+    "games_played": 146,
+    "named_games": 50,
+    "top_game": "(naziv nije u katalogu)",
+    "also_bets_sport": null
+   },
+   "flags": {},
+   "rg_label": "NORMAL",
+   "note": null
+  },
+  {
+   "username": "ivana.s",
+   "display_name": "Ivana S.",
+   "player_id": "10d0f205677b0afab05e0365c617756ca618e8f53063c0d70b9667c00beebdc5",
+   "salt": "3760a6fc3da25a544d9fa9fe1e0abd96",
+   "hash": "af2c08911bf866ba5a198304ddca10bb9295f15836a9d5e99e3c9d36f8cccac4",
+   "rounds": "120000",
+   "profile": {
+    "games_played": 134,
+    "named_games": 37,
+    "top_game": "Thunder Coins XXL: Multicoin",
+    "also_bets_sport": null
+   },
+   "flags": {},
+   "rg_label": "NORMAL",
+   "note": null
+  },
+  {
+   "username": "luka.b",
+   "display_name": "Luka B.",
+   "player_id": "1e9750ed681176268cc478d81d79eff987bbc7cdaf6d8bf39a5bc07aa4efc793",
+   "salt": "f1d4bd84f9be723a6e7309196fc9f871",
+   "hash": "342cc39caae265b27fde2870f87fbfc0a3c0074703ea34b4df282382d73ac851",
+   "rounds": "120000",
+   "profile": {
+    "games_played": 87,
+    "named_games": 42,
+    "top_game": "African Gods",
+    "also_bets_sport": "Football"
+   },
+   "flags": {},
+   "rg_label": "NORMAL",
+   "note": null
+  },
+  {
+   "username": "petra.m",
+   "display_name": "Petra M.",
+   "player_id": "170eef2623860d55e5f32f01aa25b854c2e3aa7b6ca8ab05ba3cd46dc927b2c4",
+   "salt": "7575ac421c25e741349c6872926fc4cf",
+   "hash": "198776ffb3dc1184b65a4b4618f0be2fca3447b37d7879c30db89ec98abae94c",
+   "rounds": "120000",
+   "profile": {
+    "games_played": 48,
+    "named_games": 17,
+    "top_game": "(naziv nije u katalogu)",
+    "also_bets_sport": "Tennis"
+   },
+   "flags": {},
+   "rg_label": "NORMAL",
+   "note": null
+  },
+  {
+   "username": "nikola.t",
+   "display_name": "Nikola T.",
+   "player_id": "02ff87dc9b793ab3f6bee6d35623b5fd0d3cc117cb1b18b5c2eb43e2f0e758f2",
+   "salt": "e55f73a1d90aee89d61f6db265b7b328",
+   "hash": "1aab943f330c5241d981f2fecd876d50a412d14a60b5b1842729dc0db0d94d57",
+   "rounds": "120000",
+   "profile": {
+    "games_played": 24,
+    "named_games": 11,
+    "top_game": "Sizzling Hot Deluxe",
+    "also_bets_sport": null
+   },
+   "flags": {},
+   "rg_label": "NORMAL",
+   "note": null
+  },
+  {
+   "username": "maja.r",
+   "display_name": "Maja R.",
+   "player_id": "0dcfd66649ab0f49afe3282e042335e572283cce6bf7d68d6db77d75743ef4f5",
+   "salt": "de57b0166944529bda4038561016b3c5",
+   "hash": "fdb4806ea7cbb2c5ae2da13e170e9a2adfab75878214404fd43b79b933f4c3cd",
+   "rounds": "120000",
+   "profile": {
+    "games_played": 19,
+    "named_games": 14,
+    "top_game": "Wild Wild Joker",
+    "also_bets_sport": "Football"
+   },
+   "flags": {},
+   "rg_label": "NORMAL",
+   "note": null
+  },
+  {
+   "username": "filip.d",
+   "display_name": "Filip D.",
+   "player_id": "176f7a4c8a338e05568231fbf213457a7f1694052811080164908874456a38f5",
+   "salt": "e9c24bd2162724193bcf25427bd7e028",
+   "hash": "2d5fe04df94713eee49720f42db458f0386d064a50e4376d0275d34160a4046d",
+   "rounds": "120000",
+   "profile": {
+    "games_played": 10,
+    "named_games": 6,
+    "top_game": "100 Super Roll Clover Chance",
+    "also_bets_sport": null
+   },
+   "flags": {},
+   "rg_label": "NORMAL",
+   "note": null
+  },
+  {
+   "username": "sara.v",
+   "display_name": "Sara V.",
+   "player_id": "1de9e669d7324d516f0bcc9c5ab3743a6331126dbc17924fd08a93b9f5bdb8e6",
+   "salt": "07db26eb1cf6f5f02c591de2c500a953",
+   "hash": "c3dfbbba0509a721d6d14d379ba042320818fec200a4ae6b37820eaf89532f40",
+   "rounds": "120000",
+   "profile": {
+    "games_played": 6,
+    "named_games": 4,
+    "top_game": "Chilli Respin",
+    "also_bets_sport": null
+   },
+   "flags": {},
+   "rg_label": "NORMAL",
+   "note": null
+  },
+  {
+   "username": "tomislav.j",
+   "display_name": "Tomislav J.",
+   "player_id": "1edfc0ba6ef3a58beae93ea4501572d26410fe7e0d4f8d122e91fd45235eced7",
+   "salt": "77fb9027669e4c11c9025ebe9475491b",
+   "hash": "511eeb435ecb43e7c0fbacfdf6e9e35396d937a20635e584bb4132568dd4e86b",
+   "rounds": "120000",
+   "profile": {
+    "games_played": 181,
+    "named_games": 69,
+    "top_game": "5 Heroes",
+    "also_bets_sport": "Football"
+   },
+   "flags": {
+    "deposits_this_session": 3,
+    "stake_above_own_history": true
+   },
+   "rg_label": "MODERATE",
+   "note": "Rizik otkriven — svi redovi koji potiču igru su povučeni."
+  },
+  {
+   "username": "lucija.h",
+   "display_name": "Lucija H.",
+   "player_id": "1f03b453434c30bf71f054d9df1895a8bdcacab82516e2b2b0cbd5b3ec54a742",
+   "salt": "0f0bf4e780eb1bab2a3d9d59525e9def",
+   "hash": "bf022ff8506afb60fcbb9e026d1f644bfcc770ac8e105601c664387d18d7d370",
+   "rounds": "120000",
+   "profile": {
+    "games_played": 177,
+    "named_games": 61,
+    "top_game": "(naziv nije u katalogu)",
+    "also_bets_sport": "Football"
+   },
+   "flags": {
+    "self_excluded": true
+   },
+   "rg_label": "BLOCKED",
+   "note": "Samoisključen — prijava radi, ali nema nijedne preporuke."
+  },
+  {
+   "username": "davor.z",
+   "display_name": "Davor Z.",
+   "player_id": "115f58f06e1c5b308e688424cb59d42f54a7911790c52f8eb50f9f8a4570c480",
+   "salt": "c0688b79dfb34f9b7b022fd846143e17",
+   "hash": "429a03ab7223acc3bc3a5c95ff67aa689be9cba995c9839d651f349f2759b310",
+   "rounds": "120000",
+   "profile": {
+    "games_played": 120,
+    "named_games": 55,
+    "top_game": "4 Scarab Coins: Hold and Win",
+    "also_bets_sport": "Football"
+   },
+   "flags": {
+    "age_verified": false
+   },
+   "rg_label": "AGE_UNVERIFIED",
+   "note": "Dob nije potvrđena — prijava se odbija prije pristupa igrama."
+  }
+ ]
+}
