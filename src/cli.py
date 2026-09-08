@@ -177,7 +177,10 @@ def _serve(port: int, open_browser: bool):
     if open_browser:
         def _open():
             time.sleep(1.6)
-            webbrowser.open("http://127.0.0.1:%d/" % port)
+            # ?fresh=1 clears any session left over from an earlier run. The
+            # demo opens signed OUT every time, because the whole first beat
+            # is "this is the lobby everyone sees today".
+            webbrowser.open("http://127.0.0.1:%d/?fresh=1" % port)
         threading.Thread(target=_open, daemon=True).start()
     print(_rule())
     print("  lobby    http://127.0.0.1:%d/" % port)

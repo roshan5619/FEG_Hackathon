@@ -172,7 +172,7 @@ auditable.
   never amounts. Stake appears only as a training weight.
 - **No countdowns, no scarcity, no "others are playing", no outcome or
   near-miss framing.**
-- **One chokepoint, covered by tests** — 53 of them, including one asserting the
+- **One chokepoint, covered by tests** — 54 of them, including one asserting the
   tail result against real artifacts, and one proving `/explain` reconstructs
   the model's probability exactly.
 
@@ -236,7 +236,7 @@ and it is the only limit here we cannot engineer around.
 - Pipeline → model → API → dashboard, end to end
 - A real login journey: anonymous landing → personalised lobby, 12 demo accounts
 - **~25 ms** per personalised lobby, no model fit at request time
-- **53 tests**, green on a clean clone
+- **54 tests**, green on a clean clone
 - Eight documents including a full evaluation — **with the negative result in it**
 
 **Not built, and said so**
@@ -281,7 +281,7 @@ live) → slide 5 (we lost) → slide 6 (4.28×, 732 games vs 29) → slide 9 (t
 catalogue ask).
 
 **Numbers to never round up:** 74%, 0.305, 0.056, 0.0708, 4.28×, 25×, 76.5%,
-54%, 58.4%, 53 tests.
+54%, 58.4%, 54 tests.
 
 **Expect this question:** *"Isn't 0.046 a tiny NDCG?"* — Yes, in absolute
 terms, and it should be: predicting which of 3,000 games someone tries next

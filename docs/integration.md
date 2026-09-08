@@ -163,7 +163,7 @@ roughly ninefold. It is the highest-return thing anyone could hand this project.
 python -m src.cli status            # what is built, and what the ranker learned
 python -m src.cli explain <player>  # a full lobby with the model's reasoning
 python -m src.cli demo              # server + browser
-python -m pytest tests/ -q          # 53 tests
+python -m pytest tests/ -q          # 54 tests
 ```
 
 The contract tests that matter for an integrator:

@@ -35,4 +35,4 @@ If you rebuild the deck, these are the slides that matter:
    it: a game catalogue, since 58% of stake is on games we cannot name
 
 Numbers and method: [`docs/evaluation.md`](../../docs/evaluation.md).
-Run of show: [`demo-video-link.md`](../demo-video-link.md).
+Run of show: [`live-demo.md`](../live-demo.md) — the demo is given live, not recorded.

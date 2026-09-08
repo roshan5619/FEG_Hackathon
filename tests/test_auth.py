@@ -158,6 +158,26 @@ def test_root_serves_the_landing_page_when_signed_out(client):
     assert b"Ovo je lobi koji vide svi" in r.content
 
 
+def test_fresh_clears_a_live_session(client):
+    """
+    The demo opens with `?fresh=1`. Sessions last 8 hours, so without this,
+    giving the demo twice in one afternoon lands the second audience on the
+    lobby and the "here is what everyone sees today" opening is lost.
+    """
+    normal = _account("NORMAL")
+    client.post("/login", json={"username": normal["username"], "password": PW})
+    assert client.get("/lobby").status_code == 200
+
+    r = client.get("/?fresh=1")
+    assert b"Ovo je lobi koji vide svi" in r.content, "must land signed out"
+    assert client.get("/me").json()["authenticated"] is False
+    assert client.get("/lobby").status_code == 401
+
+    # and signing back in still works, so the reset is not destructive
+    client.post("/login", json={"username": normal["username"], "password": PW})
+    assert client.get("/lobby").status_code == 200
+
+
 def test_anonymous_lobby_has_no_personalised_rows(client):
     rows = client.get("/anonymous-lobby").json()["rows"]
     assert rows, "an anonymous visitor should still see something"

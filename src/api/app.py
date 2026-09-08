@@ -21,7 +21,7 @@ import os
 from typing import Any, Dict, Optional
 
 from fastapi import Cookie, FastAPI, HTTPException, Query, Response
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
 from src import __version__
@@ -322,8 +322,20 @@ def backend_view():
 
 
 @app.get("/", include_in_schema=False)
-def root(psk_demo_session: Optional[str] = Cookie(default=None)):
-    """Landing page when signed out; the personalised lobby when signed in."""
+def root(psk_demo_session: Optional[str] = Cookie(default=None),
+         fresh: Optional[str] = None):
+    """
+    Landing page when signed out; the personalised lobby when signed in.
+
+    `?fresh=1` forces the signed-out landing page and clears the cookie. The
+    demo opens with it because the session lasts 8 hours: without it, giving
+    the demo twice in one afternoon lands the second audience straight on the
+    lobby, and the "this is what everyone sees today" opening is lost.
+    """
+    if fresh:
+        response = RedirectResponse("/", status_code=303)
+        response.delete_cookie(auth.COOKIE_NAME)
+        return response
     signed_in = auth.read_session(psk_demo_session) is not None
     page = DASHBOARD if signed_in else LOGIN
     if os.path.exists(page):

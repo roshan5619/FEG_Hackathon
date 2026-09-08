@@ -6,7 +6,7 @@
 |---|---|
 | **Team** | Q'Makers |
 | **Challenge** | FEG Innovation Challenge 2026 — Croatian brand (PSK) track |
-| **Status** | Working prototype: trained ranker, decisioning API, personalised lobby, login journey, backend visualisations, 53 passing tests, full offline evaluation |
+| **Status** | Working prototype: trained ranker, decisioning API, personalised lobby, login journey, backend visualisations, 54 passing tests, full offline evaluation |
 
 ---
 
@@ -50,6 +50,11 @@ with one-click fill. Two behave differently on purpose:
 | <http://127.0.0.1:8000/backend> | **The backend** — pipeline, the ranker's learned weights, and per-tile attribution |
 
 On Windows you can also just double-click **`run.bat`**.
+
+`demo` always opens **signed out**, clearing any session from an earlier run —
+the first thing you should see is the two-row anonymous lobby. Presenting this?
+[`demo/live-demo.md`](demo/live-demo.md) has the run of show, the failure
+recovery table and the questions to expect.
 
 ---
 
@@ -258,7 +263,7 @@ svc.lobby(svc.players[1], player={"self_excluded": True})["rows"]   # []
 ## 9. How to test and validate
 
 ```bash
-python -m pytest tests/ -q          # expect: 53 passed
+python -m pytest tests/ -q          # expect: 54 passed
 ```
 
 The suite holds the claims in place rather than describing them:
@@ -381,5 +386,6 @@ outputs. 18 MB total.
 | **Members** | `[TEAM TO ADD]` |
 | **Contact** | `[TEAM TO ADD]` |
 
-> ⚠️ Fill this in, plus the video link in
-> [`demo/demo-video-link.md`](demo/demo-video-link.md), before submitting.
+> ⚠️ Fill this in before submitting. The demo is given live — the runbook,
+> failure recovery and expected questions are in
+> [`demo/live-demo.md`](demo/live-demo.md).
