@@ -6,7 +6,36 @@
 |---|---|
 | **Team** | Q'Makers |
 | **Challenge** | FEG Innovation Challenge 2026 — Croatian brand (PSK) track |
-| **Status** | Working prototype: trained model, decisioning API, personalised dashboard, 22 passing tests, full offline evaluation |
+| **Status** | Working prototype: trained ranker, decisioning API, personalised lobby, backend visualisations, 37 passing tests, full offline evaluation |
+
+---
+
+## 0. Quickstart — 60 seconds
+
+```bash
+pip install -r requirements.txt
+python -m src.cli demo            # starts the server AND opens your browser
+```
+
+That is the whole thing. **The FEG source CSVs are not needed** — the trained
+model and the game catalogue are committed to `artifacts/`.
+
+Three more commands answer "how does it actually work":
+
+```bash
+python -m src.cli status          # what is built + the weights the ranker LEARNED
+python -m src.cli explain <id>    # one player's lobby, with per-feature reasoning
+python -m src.cli evaluate        # the model comparison table
+```
+
+Once it is running, two pages matter:
+
+| | |
+|---|---|
+| <http://127.0.0.1:8000/> | **The lobby** — switch player, watch the rows change |
+| <http://127.0.0.1:8000/backend> | **The backend** — pipeline, the ranker's learned weights, and per-tile attribution |
+
+On Windows you can also just double-click **`run.bat`**.
 
 ---
 
@@ -161,17 +190,34 @@ no configuration can relax them.
 
 ## 8. How to run
 
-```bash
-uvicorn src.api.app:app --reload --port 8000
-```
+Everything goes through one CLI.
+
+| Command | What it does |
+|---|---|
+| `python -m src.cli demo` | Starts the server **and opens the browser**. The demo path. |
+| `python -m src.cli serve --port 8000` | Server only, no browser |
+| `python -m src.cli status` | What is built, and **the weights the ranker learned** |
+| `python -m src.cli explain <player_id>` | One player's lobby plus the model's per-feature reasoning |
+| `python -m src.cli evaluate` | Model comparison table across all three tasks |
+| `python -m src.cli build --data-dir DIR` | Rebuild artifacts from the FEG CSVs *(the only command that needs them)* |
+| `python -m src.cli train` | Refit the candidate models and retrain the ranker |
+| `python -m src.cli all --data-dir DIR` | build → train → evaluate → demo |
+
+`uvicorn src.api.app:app --reload --port 8000` still works if you prefer to run
+the server directly.
+
+### The pages
 
 | URL | What |
 |---|---|
-| <http://127.0.0.1:8000/> | **The personalised lobby** — switch player, toggle risk flags, watch rows change |
+| <http://127.0.0.1:8000/> | **The personalised lobby** — switch player, toggle responsible-play flags, watch rows change |
+| <http://127.0.0.1:8000/backend> | **The backend view** — pipeline funnel, the three-way split, the ranker's learned coefficients, per-tile attribution, model comparison |
 | <http://127.0.0.1:8000/docs> | Interactive API docs |
 | <http://127.0.0.1:8000/health> | Model provenance, dataset size, catalogue counts |
 | <http://127.0.0.1:8000/players> | Sample player ids with enough named history to demo |
-| <http://127.0.0.1:8000/recommendations/{id}> | Widget rows for one player |
+| <http://127.0.0.1:8000/recommendations/{id}> | The widget rows for one player |
+| <http://127.0.0.1:8000/explain/{id}/{game}> | Why the trained ranker scored that game — exact per-feature contributions |
+| <http://127.0.0.1:8000/profile/{id}> | What the model actually knows about a player |
 | <http://127.0.0.1:8000/evaluation> | The measured results behind the design |
 
 ### Use it directly
@@ -180,7 +226,7 @@ uvicorn src.api.app:app --reload --port 8000
 from src.recsys.serve import LobbyService
 
 svc = LobbyService()                      # loads artifacts, ~0.3s
-out = svc.lobby(svc.players[1])           # ~60 ms
+out = svc.lobby(svc.players[1])           # ~25 ms
 
 for row in out["rows"]:
     print(row["title"], "->", [t["title"] for t in row["tiles"][:3]])
@@ -193,7 +239,7 @@ svc.lobby(svc.players[1], player={"self_excluded": True})["rows"]   # []
 ## 9. How to test and validate
 
 ```bash
-python -m pytest tests/ -q          # expect: 22 passed
+python -m pytest tests/ -q          # expect: 37 passed
 ```
 
 The suite holds the claims in place rather than describing them:
@@ -207,7 +253,10 @@ The suite holds the claims in place rather than describing them:
 | `test_discovery_never_scores_an_already_played_game` | No leakage between the tasks |
 | `test_metrics_match_hand_computation` | NDCG/precision/recall verified by hand on a fixture |
 | `test_popularity_correction_actually_has_an_effect` | Regression test for a silent no-op bug |
-| **`test_item_item_beats_popularity_on_tail_discovery`** | **The headline claim, against the real artifacts** |
+| `test_ranker_is_actually_trained` | The ranker is a fitted estimator with learned parameters, not a heuristic |
+| `test_explanation_is_exact_for_logistic_regression` | Contributions reconstruct the model's probability — so `/explain` can be trusted |
+| `test_fit_matrix_excludes_the_test_window` | No test-window interaction leaks into what the model is fitted on |
+| **`test_sequence_model_beats_cf_on_tail_discovery`** | **The headline claim, against the real artifacts** |
 
 ### Rebuilding from source data (optional)
 
@@ -281,7 +330,7 @@ training interactions.
 |---|---|
 | [`docs/how-it-works.md`](docs/how-it-works.md) | **Start here.** Every formula, the trained ranker, and both leaks we found and fixed |
 | [`docs/integration.md`](docs/integration.md) | How FEG ships this: the contract, where each row goes, sizing, rollout, what FEG must supply |
-| [`docs/evaluation.md`](docs/evaluation.md) | **Protocol, full results, the negative finding, and the limits** |
+| [`docs/evaluation.md`](docs/evaluation.md) | **Protocol, full results, the negative findings, and the limits** |
 | [`docs/architecture.md`](docs/architecture.md) | Components, data flow, FEG stack alignment, what is not built |
 | [`docs/impact-case.md`](docs/impact-case.md) | Value model built on measured coverage, not benchmarks |
 | [`docs/compliance-note.md`](docs/compliance-note.md) | EU AI Act, Croatian binding rules, GDPR — mapped to code and tests |
