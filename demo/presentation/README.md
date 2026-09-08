@@ -5,7 +5,13 @@
 > concept). It does **not** describe this submission and should not be
 > submitted as-is.
 
-## What to present instead
+## The deck to present
+
+**Slide content: [`slides.md`](slides.md)** — every slide's headline, copy and
+figures, ready to rebuild as `.pptx`. A presentable HTML version of the same
+deck also exists; ask the team lead for the link.
+
+## Why
 
 The current solution is a **personalised casino lobby**: a game recommendation
 system that replaces a static, identical-for-everyone lobby with rows driven by
