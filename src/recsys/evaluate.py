@@ -1,7 +1,7 @@
 """
 Evaluation harness.
 
-    python -m src.recsys.evaluate --all
+    python -m src.recsys.evaluate
 
 The whole point of this module is the task split. In this dataset a median 78%
 of a player's launches sit in their top-3 games, so a model that simply
@@ -40,7 +40,7 @@ from scipy import sparse
 
 from src.pipeline.build_dataset import ART, load
 from src.recsys import baselines as B
-from src.recsys.item_item import ALS, ItemItemCF
+from src.recsys.item_item import ItemItemCF
 
 KS = (5, 10, 20)
 MIN_TRAIN_ITEMS = 3          # a player needs some history to personalise from
@@ -153,7 +153,7 @@ def evaluate(model, X_train, X_test, task: str, candidate_mask: np.ndarray,
     return out
 
 
-def run(all_models: bool = True, displayable_only: bool = False):
+def run(displayable_only: bool = False):
     d = load()
     X_train, X_test = d["X_train"], d["X_test"]
     n_items = X_train.shape[1]
@@ -177,8 +177,6 @@ def run(all_models: bool = True, displayable_only: bool = False):
         B.UserTop(), B.ProviderPopular(item_prov),
         ItemItemCF(),
     ]
-    if all_models:
-        models.append(ALS())
 
     results = {}
     for m in models:
@@ -209,12 +207,11 @@ def _table(results, task, ks=(10,)):
 
 def main():
     ap = argparse.ArgumentParser(description="Evaluate recommenders.")
-    ap.add_argument("--all", action="store_true", help="include ALS (slower)")
     ap.add_argument("--displayable-only", action="store_true",
                     help="restrict candidates and ground truth to nameable games")
     args = ap.parse_args()
 
-    results, n_cand = run(all_models=args.all, displayable_only=args.displayable_only)
+    results, n_cand = run(displayable_only=args.displayable_only)
 
     print("\ncandidate pool: %d games%s" % (
         n_cand, " (displayable only)" if args.displayable_only else " (full catalogue)"))

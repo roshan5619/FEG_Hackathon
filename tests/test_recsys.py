@@ -189,3 +189,30 @@ def test_item_item_beats_popularity_on_tail_discovery():
     pop = evaluate(MostPlayed().fit(X), X, T, "tail_discovery", mask)
     assert cf["ndcg@10"] > pop["ndcg@10"]
     assert cf["coverage@10"] > pop["coverage@10"]
+
+
+# ------------------------------------------------------- serving behaviour
+def test_unnamed_games_appear_only_in_continue_playing():
+    """
+    54% of players have no nameable game in their history, so "Continue
+    playing" is allowed to label a game by provider and kind. Recommending a
+    game nobody can identify would be a different thing entirely, and must
+    never happen.
+    """
+    import os
+    from src.pipeline.build_dataset import ART
+    if not os.path.exists(os.path.join(ART, "model.npz")):
+        pytest.skip("artifacts not built")
+    from src.recsys.serve import LobbyService
+
+    svc = LobbyService()
+    seen_placeholder = False
+    for row_idx in range(0, 40):
+        out = svc.lobby(svc.players[row_idx])
+        for row in out["rows"]:
+            for t in row["tiles"]:
+                if t["named"] is False:
+                    seen_placeholder = True
+                    assert row["key"] == "continue", (
+                        "unnamed game leaked into row %r" % row["key"])
+    assert seen_placeholder, "expected at least one placeholder across 40 players"

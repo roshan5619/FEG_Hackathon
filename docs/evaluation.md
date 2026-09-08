@@ -167,14 +167,20 @@ reaches 680 games where popularity reaches 37.
    predicts its own success. This biases §2.1 *in favour of* `most_played` and
    is a further reason not to read that table as the whole story.
 4. **83% of stake is on unnameable games.** They train the model but can never
-   be displayed, so the servable catalogue is 351 of 3,202 games. A game
-   catalogue from FEG would remove this limit entirely.
+   be *recommended*, so the recommendable catalogue is 351 of 3,202. The same
+   gap means **54% of players have no nameable game in their own history** —
+   "Continue playing" therefore labels those by provider and kind
+   ("Amusnet slot"), marked `named: false` and visibly dimmed, which lifts that
+   row from 46.5% to 100% of players. A game catalogue from FEG would remove
+   the limit entirely.
 5. **No confidence intervals.** Differences of the size in §2.2 (2.25×) are
    unlikely to be noise at n=6,323, but we have not bootstrapped them.
-6. **ALS is implemented and not reported.** It is in `src/recsys/item_item.py`
-   and runs via `--all`. We did not include it in the headline tables because
-   we have not tuned it, and reporting an untuned model beside tuned ones
-   would be misleading in either direction.
+6. **Only one model family was taken to completion.** An implicit-feedback
+   ALS implementation was written and then removed rather than shipped
+   untuned: reporting an untuned latent-factor model beside a tuned
+   neighbourhood one would have been misleading in either direction, and
+   leaving unused code in the repository is worse. Matrix factorisation
+   remains the obvious next comparison.
 
 ---
 

@@ -33,6 +33,24 @@ DEFAULT_ROW_SIZE = 8
 MAX_PER_PROVIDER = 3         # diversity cap inside a single row
 
 
+# Game kinds we can infer from src_game_type, used to label a game we cannot
+# name. "Amusnet slot" is not the title, and the tile says so - but a player
+# recognises their own game from provider and kind, and it is all we truly know.
+_KINDS = [
+    ("jackpot", "jackpot slot"), ("slot", "slot"), ("roulette", "roulette"),
+    ("blackjack", "blackjack"), ("crash", "crash game"), ("arcade", "arcade game"),
+    ("card", "card game"), ("table", "table game"),
+]
+
+
+def _kind_of(game_type: Optional[str]) -> str:
+    low = (game_type or "").lower()
+    for needle, label in _KINDS:
+        if needle in low:
+            return label
+    return "game"
+
+
 @dataclass
 class Tile:
     code: str
@@ -41,11 +59,12 @@ class Tile:
     game_type: Optional[str]
     score: float
     why: str
+    named: bool = True          # False = provider/kind placeholder, not a real title
 
     def as_dict(self) -> Dict[str, Any]:
         return {"code": self.code, "title": self.title, "provider": self.provider,
                 "game_type": self.game_type, "score": round(float(self.score), 5),
-                "why": self.why}
+                "why": self.why, "named": self.named}
 
 
 @dataclass
@@ -88,27 +107,49 @@ class LobbyService:
             (self.catalog.get(c) or {}).get("provider") for c in self.items]
 
     # -- helpers -----------------------------------------------------------
-    def _tile(self, idx: int, score: float, why: str) -> Optional[Tile]:
+    def _tile(self, idx: int, score: float, why: str,
+              allow_unnamed: bool = False) -> Optional[Tile]:
+        """
+        Build a tile.
+
+        `allow_unnamed` is granted only to "Continue playing". Reminding someone
+        of a game they already play, labelled by provider and kind, is honest -
+        they recognise it. *Recommending* a game we cannot name would not be:
+        the player has no way to know what they are being offered. That is why
+        the flag exists rather than a global setting.
+        """
         code = self.items[idx]
         g = self.catalog.get(code) or {}
-        if not g.get("displayable") or not g.get("title"):
+        if g.get("displayable") and g.get("title"):
+            return Tile(code=code, title=g["title"], provider=g.get("provider"),
+                        game_type=g.get("game_type"), score=score, why=why)
+        if not allow_unnamed:
             return None
-        return Tile(code=code, title=g["title"], provider=g.get("provider"),
-                    game_type=g.get("game_type"), score=score, why=why)
+        prov = g.get("provider")
+        kind = _kind_of(g.get("game_type"))
+        title = ("%s %s" % (prov, kind)) if prov else kind.capitalize()
+        return Tile(code=code, title=title, provider=prov,
+                    game_type=g.get("game_type"), score=score,
+                    why="In your history · title not in the catalogue", named=False)
 
     def _take(self, order: np.ndarray, scores: np.ndarray, why_fn, n: int,
-              exclude: set) -> List[Tile]:
+              exclude: set, allow_unnamed: bool = False) -> List[Tile]:
         """Walk a ranked index list, applying display, diversity and dedup rules."""
         out: List[Tile] = []
         per_provider: Dict[Optional[str], int] = {}
         for idx in order:
             i = int(idx)
-            if i in exclude or not self.displayable[i]:
+            if i in exclude:
+                continue
+            if not allow_unnamed and not self.displayable[i]:
                 continue
             prov = self.provider_of[i]
-            if per_provider.get(prov, 0) >= MAX_PER_PROVIDER:
+            # The diversity cap stops one studio owning a recommendation row. It
+            # must not apply to a player's own history - if they only play
+            # Amusnet, that is simply what they play.
+            if not allow_unnamed and per_provider.get(prov, 0) >= MAX_PER_PROVIDER:
                 continue
-            t = self._tile(i, float(scores[i]), why_fn(i))
+            t = self._tile(i, float(scores[i]), why_fn(i), allow_unnamed)
             if t is None:
                 continue
             out.append(t)
@@ -168,13 +209,16 @@ class LobbyService:
             # 1. Continue playing - their own history, strongest first.
             own = self.X[urow].toarray().ravel()
             own_order = np.argsort(-own)
+            # Unnamed games are allowed here and only here: 54% of players have
+            # no nameable game in their history at all, so without this the row
+            # is empty for half the player base.
             tiles = self._take(own_order[own[own_order] > 0], own,
-                               lambda i: "You have played this", row_size, set())
+                               lambda i: "You have played this", row_size, set(),
+                               allow_unnamed=True)
             if tiles:
                 rows.append(Row("continue", "Continue playing",
                                 "Games you already play, most-played first",
                                 "user_history", tiles))
-                used |= {self.items.index(t.code) for t in tiles} if False else set()
 
             # 2. Because you played X - item-item, explainable, tail-friendly.
             excl = set(played)

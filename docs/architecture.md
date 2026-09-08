@@ -118,7 +118,8 @@ three reasons in order of weight:
    an unexplainable recommender on a gambling platform is a liability. The
    `why` string on each tile is the literal top contributor to the score.
 2. **Density fit.** 0.39% with ~3,200 items is where neighbourhood methods do
-   well.
+   well. Matrix factorisation's advantage appears on sparser, larger
+   catalogues, and is the obvious next comparison.
 3. **No training loop to get wrong.** One sparse product.
 
 **Trained wide, served narrow.** The similarity matrix covers all 3,202 games
@@ -185,7 +186,6 @@ does not.
 
 - **No Vue SDK.** The dashboard is plain HTML; production would be Vue 3.
 - **No Kafka consumer, no Redis.** The pipeline is offline; the API reads files.
-- **ALS is implemented but untuned and unreported** (`--all` runs it).
 - **No session/sequence model.** Recommendations are per player, not per
   session, so "what to play next *right now*" is not modelled.
 - **No live exclusion-register integration.** The gate is implemented and

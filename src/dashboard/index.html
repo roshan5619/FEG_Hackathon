@@ -94,6 +94,11 @@ select{min-width:230px}
 .tile-prov{font-family:var(--mono);font-size:10px;color:var(--muted)}
 .tile-why{font-size:11px;color:var(--ink2);margin-top:auto;padding-top:6px;
   border-top:1px solid var(--line);line-height:1.35}
+/* A tile whose game we cannot name. Dimmed and dashed so it never reads as a
+   real title, and only ever appears in "Continue playing". */
+.tile.unnamed .art{filter:saturate(.25) brightness(.8)}
+.tile.unnamed .tile-title{color:var(--ink2);font-style:italic}
+.tile.unnamed{border-style:dashed}
 
 /* blocked / empty */
 .empty{background:var(--surface);border:1px solid var(--line);border-radius:4px;
@@ -188,7 +193,7 @@ footer{padding:26px 0 44px;color:var(--muted);font-size:12px}
   }
 
   function tile(t){
-    var d = el("div","tile");
+    var d = el("div","tile" + (t.named === false ? " unnamed" : ""));
     d.appendChild(art(t.title));
     var b = el("div","tile-body");
     b.appendChild(el("div","tile-title", esc(t.title)));

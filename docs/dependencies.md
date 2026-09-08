@@ -42,7 +42,7 @@ BSD-3-Clause. Plain `uvicorn` works if a smaller tree is preferred.
 | Package | Why not |
 |---|---|
 | **pandas** | The pipeline reads one CSV in a single pass with the stdlib `csv` module. Pandas would add ~60 MB for no benefit. |
-| **implicit** | ALS is ~30 lines in `src/recsys/item_item.py`. A compiled dependency for one comparison model is not worth the install friction. |
+| **implicit** | No latent-factor model is shipped. An ALS implementation was written and removed rather than reported untuned. |
 | **scikit-learn** | Nothing here needs it. |
 | **torch / tensorflow** | No neural model. Item-item CF is the right tool at this density. |
 
@@ -75,7 +75,6 @@ Not code dependencies, but intellectual provenance that should be disclosed:
 | Input | Use |
 |---|---|
 | Item-item collaborative filtering (Sarwar et al., 2001) | The primary model. Standard formulation with shrinkage and top-k neighbour pruning. |
-| Implicit-feedback ALS (Hu, Koren & Volinsky, 2008) | Hand-implemented comparison model in `item_item.py`. Untuned, unreported. |
 | NDCG (Järvelin & Kekäläinen, 2002) | Ranking metric; implementation verified by hand against a fixture in `tests/`. |
 | FEG stack diagram (supplied with the brief) | Basis for the stack alignment in `architecture.md` |
 | FEG EU & Croatia Compliance Guide (4 Sep 2026) | Basis for `compliance-note.md` |

@@ -59,7 +59,7 @@ add what it structurally cannot do**. Full tables and method in
 | Row | Model | Why it exists |
 |---|---|---|
 | **Trending now** | `most_played` | Wins the head outright. This is *Najigranije* — we kept it |
-| **Continue playing** | `user_top` | NDCG 0.73 on repeat; labelled as the easy task it is |
+| **Continue playing** | `user_top` | NDCG 0.73 on repeat; labelled as the easy task it is. Serves **100%** of players |
 | **Picked for you** | item-item CF | Explainable: every tile names the game that caused it |
 | **Discover something new** | item-item CF, top-50 removed | The 2.25× result above |
 | **New releases** | cold items | 12.1% of discovery is on games with *zero* history — no CF can ever reach them |
@@ -76,9 +76,15 @@ add what it structurally cannot do**. Full tables and method in
   is never scored at all — the API returns zero rows, not a filtered list. At
   `MODERATE` risk every engagement row is withheld and only *Continue playing*
   survives. One chokepoint, covered by tests.
-- **Nothing unnameable is ever displayed.** 83% of stake sits on opaque game
-  codes (`pop_9f571b7a_egtfeg`). They train the model — their co-occurrence is
-  real signal — but they can never reach a tile.
+- **Nothing unnameable is ever *recommended*.** 83% of stake sits on opaque
+  game codes (`pop_9f571b7a_egtfeg`). They train the model — their
+  co-occurrence is real signal — but they can never appear in a recommendation
+  row, because a player has no way to know what they are being offered.
+  *Continue playing* is the single exception: **54% of players have no
+  nameable game in their history at all**, so there they are labelled by what
+  we genuinely know — "Amusnet slot", visibly dimmed and marked
+  `named: false`. Reminding someone of a game they already play is not the
+  same as recommending an unidentifiable one. Guarded by a test.
 - **Diversity caps** — at most 3 games per provider in a row, so a single
   studio cannot own the lobby.
 
@@ -210,7 +216,7 @@ Requires `CA_Player.csv`, which is **not** in this repository:
 ```bash
 python -m src.pipeline.build_dataset --source path/to/CA_Player.csv
 python -m src.recsys.train
-python -m src.recsys.evaluate            # add --all to include ALS
+python -m src.recsys.evaluate
 ```
 
 Reconciles to 741,679 rows · 23,673 train players · 3,202 games · 296,205
@@ -237,8 +243,9 @@ training interactions.
 
 ### Data
 - **One month** (Aug 2026). No seasonality; the test window is 7 days.
-- **83% of stake is on unnameable games**, so the servable catalogue is 351 of
-  3,202. A game catalogue from FEG would remove this entirely — **the single
+- **83% of stake is on unnameable games**, so the *recommendable* catalogue is
+  351 of 3,202 and **54% of players have no nameable game in their history**. A
+  game catalogue from FEG would remove this entirely — **the single
   highest-value thing we could be given.**
 - **12.1% of discovery is unreachable by any CF model** (games with zero
   history). Recall ceiling 87.9%.
@@ -255,7 +262,6 @@ training interactions.
 ### Not built
 - No Vue SDK — the dashboard is plain HTML.
 - No Kafka/Redis — the pipeline is offline, the API loads a file.
-- **ALS is implemented but untuned and unreported.** Runs via `--all`.
 - No live exclusion-register integration: the gate is implemented and tested,
   the caller supplies the flag.
 - No session/sequence model — recommendations are per player, not per session.
