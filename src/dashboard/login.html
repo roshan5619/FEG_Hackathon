@@ -39,13 +39,22 @@ code{font-family:var(--mono);font-size:.87em;background:var(--raise);padding:1px
   padding:7px 12px;border-radius:4px;white-space:nowrap}
 .topnav a.on{background:var(--raise);color:var(--ink)}
 
-.hero{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:26px;padding:26px 0 6px}
-@media (max-width:940px){.hero{grid-template-columns:minmax(0,1fr)}}
+/* Two columns: the lobby itself on the left, sign-in rail on the right.
+   `align-items:start` + a sticky rail is what keeps the games at the top -
+   without it the 12-account list sets the row height and leaves a dead
+   column of background beside the pitch. */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 356px;gap:26px;
+  padding:20px 0 6px;align-items:start}
+.rail{position:sticky;top:14px}
+@media (max-width:940px){
+  .hero{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static}
+}
 
-.pitch h1{font-size:clamp(24px,3.4vw,34px);line-height:1.14;letter-spacing:-.025em;
-  font-weight:800;max-width:20ch;text-wrap:balance}
-.pitch p{color:var(--ink2);font-size:14.5px;margin-top:12px;max-width:58ch}
-.same{margin-top:16px;padding:12px 16px;border-radius:6px;font-size:13.5px;
+.pitch h1{font-size:clamp(22px,3vw,30px);line-height:1.14;letter-spacing:-.025em;
+  font-weight:800;max-width:22ch;text-wrap:balance}
+.pitch p{color:var(--ink2);font-size:14px;margin-top:9px;max-width:62ch}
+.same{margin-top:13px;padding:11px 15px;border-radius:6px;font-size:13.5px;
   background:rgba(224,86,79,.10);border:1px solid rgba(224,86,79,.35)}
 .same b{display:block;margin-bottom:3px}
 .same span{color:var(--ink2);font-size:12.5px}
@@ -69,8 +78,11 @@ button.primary:disabled{opacity:.6;cursor:default}
 .err b{display:block;margin-bottom:4px}
 .err ul{margin:7px 0 0;padding-left:18px;color:var(--ink2);font-size:12.5px}
 
-/* credential list */
+/* credential list - capped so the rail never outgrows the viewport */
 .creds{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+.creds .list{max-height:min(46vh,360px);overflow-y:auto;padding-right:4px}
+.creds .list::-webkit-scrollbar{width:7px}
+.creds .list::-webkit-scrollbar-thumb{background:var(--rule);border-radius:4px}
 .creds .h{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
   color:var(--muted);margin-bottom:9px}
 .creds .pw{font-size:12.5px;color:var(--ink2);margin-bottom:10px}
@@ -86,7 +98,8 @@ button.primary:disabled{opacity:.6;cursor:default}
 .tag.BLOCKED{color:var(--red)} .tag.AGE_UNVERIFIED{color:var(--red)}
 
 /* anonymous lobby preview */
-.rowsec{margin:26px 0 0}
+.rowsec{margin:22px 0 0}
+.rowsec:first-child{margin-top:18px}
 .rhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-bottom:11px}
 .rhead h2{font-size:18px;font-weight:700;letter-spacing:-.015em}
 .rhead .sub{font-size:12.5px;color:var(--muted)}
@@ -134,40 +147,44 @@ footer{padding:24px 0 44px;color:var(--muted);font-size:11.5px;max-width:92ch}
 
 <div class="wrap">
   <div class="hero">
-    <div class="pitch">
-      <h1>Ovo je lobi koji vide svi.</h1>
-      <p>Isti redovi, isti raspored, iste igre — za svih <b>23.673</b> igrača, bez obzira jesu li
-      odigrali jednu igru ili tri stotine. Glavni red doseže <b>29</b> igara od 3.202.</p>
-      <div class="same">
-        <b>Prijavi se i pogledaj razliku.</b>
-        <span>Nakon prijave isti ovaj ekran gradi se iz tvoje stvarne povijesti igranja —
-        trenirani model preporučuje iz 732 igre umjesto 29.</span>
+    <div class="main">
+      <div class="pitch">
+        <h1>Ovo je lobi koji vide svi.</h1>
+        <p>Isti redovi, isti raspored, iste igre — za svih <b>23.673</b> igrača, bez obzira jesu li
+        odigrali jednu igru ili tri stotine. Glavni red doseže <b>29</b> igara od 3.202.</p>
+        <div class="same">
+          <b>Prijavi se i pogledaj razliku.</b>
+          <span>Nakon prijave isti ovaj ekran gradi se iz tvoje stvarne povijesti igranja —
+          trenirani model preporučuje iz 732 igre umjesto 29.</span>
+        </div>
       </div>
+
+      <div id="anon"><div class="loading">učitavanje lobija…</div></div>
     </div>
 
-    <form class="card" id="loginForm" autocomplete="off">
-      <h2>Prijava</h2>
-      <div class="sub">Demo račun — odaberi ispod ili upiši ručno</div>
-      <div class="field">
-        <label class="f" for="u">Korisničko ime</label>
-        <input type="text" id="u" name="username" autocomplete="off" spellcheck="false">
-      </div>
-      <div class="field">
-        <label class="f" for="p">Lozinka</label>
-        <input type="password" id="p" name="password" autocomplete="off">
-      </div>
-      <button class="primary" type="submit" id="go">Prijavi se</button>
-      <div id="err"></div>
+    <div class="rail">
+      <form class="card" id="loginForm" autocomplete="off">
+        <h2>Prijava</h2>
+        <div class="sub">Demo račun — odaberi ispod ili upiši ručno</div>
+        <div class="field">
+          <label class="f" for="u">Korisničko ime</label>
+          <input type="text" id="u" name="username" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label class="f" for="p">Lozinka</label>
+          <input type="password" id="p" name="password" autocomplete="off">
+        </div>
+        <button class="primary" type="submit" id="go">Prijavi se</button>
+        <div id="err"></div>
 
-      <div class="creds">
-        <div class="h">Demo računi — klikni za popunjavanje</div>
-        <div class="pw" id="pw"></div>
-        <div id="accts"><div class="loading">učitavanje…</div></div>
-      </div>
-    </form>
+        <div class="creds">
+          <div class="h">Demo računi — klikni za popunjavanje</div>
+          <div class="pw" id="pw"></div>
+          <div class="list" id="accts"><div class="loading">učitavanje…</div></div>
+        </div>
+      </form>
+    </div>
   </div>
-
-  <div id="anon"><div class="loading">učitavanje lobija…</div></div>
 
   <div class="note">
     <b>O ovim računima / About these accounts</b>
