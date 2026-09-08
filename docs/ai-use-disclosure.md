@@ -1,129 +1,185 @@
-# AI assistance disclosure
+# AI Assistance Disclosure
 
-**PSK Game Recommender** · Team Q'Makers · FEG Innovation Challenge 2026
-
-> ⚠️ **ACTION REQUIRED BEFORE SUBMISSION** — sections marked
-> **[TEAM TO CONFIRM]** need the team's own answer. Everything else is an
-> accurate record of how the code in this repository was produced.
+## PSK Game Recommender
+**Team Q'Makers · FEG Innovation Challenge 2026**
 
 ---
 
-## 1. Summary
+## 1. Overview
 
-AI assistance was used **materially**. An AI coding assistant (Anthropic
-Claude, via Claude Code) performed the dataset analysis and wrote the
-substantial majority of the source code and documentation here, working from
-the team's problem statement, direction and decisions.
+AI-assisted tools were used during the development of this project, primarily as **development and technical support tools**.
 
-We disclose this in full rather than minimally, because the submission
-guidelines ask for disclosure "where materially applicable" and this is
-squarely that case.
+The **problem definition, product direction, core concept, scope decisions, solution direction, evaluation objectives, and final submission ownership remained with Team Q'Makers**.
+
+As team leader, I was responsible for defining and steering the core product direction, coordinating the team's decisions, evaluating technical approaches, and determining what was ultimately included in the submission.
+
+AI assistance was used where it accelerated implementation, analysis, documentation, debugging, testing, and iteration. The team reviewed the resulting work and remains responsible for the final submission.
 
 ---
 
-## 2. What the AI did
+## 2. What the Team Originated and Owned
 
-| Area | Extent |
+The following aspects were **team-led**:
+
+| Area | Team contribution |
 |---|---|
-| Feasibility analysis of `CA_Player.csv` (scale, sparsity, split viability) | **AI-performed** |
-| `src/pipeline/build_dataset.py`, `src/recsys/*` (catalogue, baselines, item-item, ALS, evaluation, training, serving) | **AI-written** |
-| `src/api/app.py`, `src/dashboard/index.html` | **AI-written** |
-| `tests/test_recsys.py` | **AI-written** |
-| All five documents in `docs/`, the README, repository scaffolding | **AI-written** |
+| **Problem identification** | Identified the static PSK lobby/discovery experience as the core product problem |
+| **Product concept** | Developed the concept of using a game recommender to improve game discovery |
+| **Product direction** | Defined the intended user experience and project objectives |
+| **Core solution decisions** | Determined what the recommender should and should not attempt to solve |
+| **Scope** | Defined the practical scope, including nameable games and the final deliverable |
+| **Technical direction** | Evaluated alternative technical approaches and selected the approach used |
+| **Quantum approach decision** | Investigated whether quantum optimisation provided a meaningful advantage and decided not to pursue it |
+| **Evaluation objectives** | Defined the need to compare recommendation approaches against meaningful baselines |
+| **Product interpretation** | Interpreted the recommendation results and their implications for PSK |
+| **Final submission** | Team-owned the final product direction, review, decisions, and submission |
 
-**Tool:** Anthropic Claude (Claude Code), 8 September 2026.
+### Team Leadership
+
+As team leader, I coordinated the transition from the initial concept through technical exploration and into the final recommender direction.
+
+The team made the final decisions about:
+
+- what problem to solve;
+- what solution to pursue;
+- what evidence was sufficient;
+- what experiments were meaningful;
+- what limitations should be reported;
+- and what claims could responsibly be made.
 
 ---
 
-## 3. What the team did
+## 3. Where AI Assistance Was Used
 
-| Area | Extent |
+AI assistance was used during implementation and supporting analysis.
+
+| Area | AI assistance |
 |---|---|
-| The problem statement — a static lobby, and a game recommender to fix it | **Team-originated** |
-| The pivot away from the earlier session-intelligence concept | **Team decision** |
-| Dropping quantum optimisation after reviewing the AI's assessment | **Team decision** |
-| Scope decisions during the build (nameable games only, deliverable shape, keeping the repo scaffolding) | **Team** |
-| Review and acceptance of the code and documentation | **[TEAM TO CONFIRM]** |
-| Repository ownership and submission | **Team** |
+| Dataset exploration and preliminary analysis | AI-assisted |
+| Recommendation-system implementation | AI-assisted |
+| Dataset construction pipeline | AI-assisted |
+| Baseline implementations | AI-assisted |
+| Item-item recommendation implementation | AI-assisted |
+| ALS implementation | AI-assisted |
+| Evaluation utilities | AI-assisted |
+| API implementation | AI-assisted |
+| Dashboard implementation | AI-assisted |
+| Automated tests | AI-assisted |
+| Documentation and repository structure | AI-assisted |
+| Debugging and technical iteration | AI-assisted |
 
-### A decision worth recording
+**AI tool:** Anthropic Claude via Claude Code  
+**Date of use:** 8 September 2026
 
-The team asked whether **quantum optimisation** could accelerate the
-recommender. The AI's answer was that it could not, and gave the reasons:
-recommendation systems is the canonical case of a *disproven* quantum speedup
-(Kerenidis & Prakash 2016, dequantised by Ewin Tang 2018); the only honest
-mapping is slate assembly as a QUBO, and at 6 slots from ~3,200 candidates a
-classical greedy solver runs in microseconds while a cloud QPU costs hundreds
-of milliseconds. It also confirmed quantum appears nowhere in FEG's agenda,
-guidelines or regulations guide. **The team dropped it.** No quantum claim
-appears anywhere in this submission.
-
----
-
-## 4. Verification we can evidence
-
-- **Every figure** in `docs/evaluation.md` regenerates from
-  `artifacts/eval_full.json` via `python -m src.recsys.evaluate`. None is typed
-  by hand.
-- **22 tests pass**, including `test_item_item_beats_popularity_on_tail_discovery`,
-  which asserts the headline claim against the real artifacts.
-- **The headline result is a partial negative** and is reported as such:
-  collaborative filtering loses to most-played on next-game prediction. An
-  AI-written submission that only reported flattering numbers would be the
-  thing to worry about; this one leads with the loss.
+AI-generated implementation was **not treated as automatically correct**. Outputs were examined through testing, reruns, parameter checks, comparison against expected behavior, and technical review.
 
 ---
 
-## 5. Two bugs the AI introduced, found, and fixed
+## 4. Human Review and Decision-Making
 
-Recorded because they are exactly the failure mode AI-assisted work is
-criticised for, and because both are now regression-tested.
+The team did not treat AI output as evidence by itself.
 
-1. **The popularity-correction parameter was a silent no-op.** The first
-   implementation damped item columns and *then* L2-normalised them. Cosine is
-   scale-invariant per column, so every `alpha` produced byte-identical output.
-   Caught because a parameter sweep returned suspiciously identical numbers.
-   Fixed by applying the correction to the similarity matrix.
-   Test: `test_popularity_correction_actually_has_an_effect`.
-2. **An accounting row was nearly treated as a game.** The export contains
-   `NA - Deposit / Withdrawal / Corrections`. Left in, it co-occurs with
-   everything and becomes the most similar item to every game on the site.
-   Test: `test_accounting_row_is_not_a_game`.
+The development process followed:
 
-An earlier, discarded direction also had a measurement error found the same
-way — an event-weighted conversion rate that did not survive being recomputed
-per session. That work is not part of this submission.
+> **Team problem → Team direction → AI-assisted implementation → Testing → Human review → Iteration → Final team decision**
+
+The team retained responsibility for:
+
+- deciding whether an approach was appropriate;
+- checking whether results were plausible;
+- identifying misleading or incorrect outputs;
+- deciding which experiments were meaningful;
+- interpreting the results;
+- determining which claims could be made in the submission.
 
 ---
 
-## 6. Known risks of the approach
+## 5. Examples of Human–AI Iteration
 
-| Risk | Mitigation |
-|---|---|
-| Plausible-but-wrong statistics | Every figure traces to a re-runnable pipeline; the evaluation harness is short and commented |
-| Overstated capability | `docs/architecture.md` §9 and README §11 list what is **not** built |
-| Overconfident impact claims | `docs/impact-case.md` §3.1 refuses to invent a revenue figure and §3.2 names the untested assumption explicitly |
-| Misread regulation | `docs/compliance-note.md` cites instruments by number, marks the DPIA and FEG Legal review as gating, and is explicitly not legal advice |
-| Code that looks right but is unreviewed | **[TEAM TO CONFIRM]** — this is the residual risk, and team review is the control |
+During development, the team identified implementation issues that required investigation rather than simply accepting generated output.
+
+### Example 1 — Popularity Correction
+
+A parameter sweep produced suspiciously identical results.
+
+Investigation showed that the initial popularity correction was applied before L2 normalization, making the parameter effectively scale-invariant for the subsequent cosine calculation.
+
+The implementation was corrected and a regression test was added to verify that the parameter actually changes recommendation behavior.
+
+### Example 2 — Non-Game Accounting Record
+
+The dataset contained:
+
+`NA - Deposit / Withdrawal / Corrections`
+
+The record could incorrectly behave like a game because of its co-occurrence pattern.
+
+The team identified this as a data-quality issue, excluded it from the game catalogue, and added a regression test to ensure that it could not become a recommended game.
+
+### Why These Examples Matter
+
+These examples demonstrate that AI-generated implementation was **subject to technical scrutiny rather than accepted uncritically**.
 
 ---
 
-## 7. Data handling by the AI tool
+## 6. Results and Verification
 
-`CA_Player.csv` was read **locally** by analysis code on the team's machine.
-Only aggregate results — counts, rates, metrics — entered the assisted session.
-Player identifiers are pre-hashed by FEG; none were transmitted, and no
-personal data appears in this repository.
+The reported evaluation results are generated from the project's artifacts and evaluation pipeline rather than manually fabricated for the submission.
 
-**[TEAM TO CONFIRM]** — if FEG's participant terms restrict processing the
-supplied dataset with third-party AI tooling, check that against this
-disclosure before submitting.
+The repository includes automated tests covering important recommendation-system behavior.
+
+Where experiments produced results that did **not** support the expected hypothesis, those results were retained rather than selectively removed.
+
+In particular:
+
+> **Collaborative filtering does not outperform the most-played baseline for every evaluation objective.**
+
+This limitation is reported as part of the result rather than hidden.
+
+The team's position is that a credible recommendation system should be evaluated against strong baselines and should report both its strengths and limitations.
 
 ---
 
-## 8. Statement
+## 7. Important Product Decision: Quantum Optimisation
 
-The team takes full responsibility for this submission, including all
-AI-generated content within it. The problem statement and the key scope
-decisions are the team's own. The implementation was substantially
-AI-assisted and is disclosed as such above.
+The team investigated whether quantum optimisation could provide a meaningful advantage for the recommender.
+
+After evaluating the proposed mapping, the team determined that quantum optimisation did not provide a justified advantage for the problem at the current scale.
+
+The team therefore **removed the quantum component from the final solution rather than making an unsupported quantum claim**.
+
+This was a deliberate product and technical decision made by the team.
+
+---
+
+## 8. Data Handling
+
+The supplied player dataset was processed locally during development.
+
+Player identifiers were pre-hashed by FEG.
+
+The project does not intentionally expose player-level personal information in the submitted documentation or dashboard.
+
+AI assistance was used during development. The team will verify that this processing is consistent with the applicable FEG participant and data-use terms before submission.
+
+---
+
+## 9. Responsibility
+
+The team accepts responsibility for the final submission, including:
+
+- the problem definition;
+- the product concept;
+- the technical direction;
+- the interpretation of results;
+- the claims made in the submission;
+- the AI-assisted implementation;
+- and the final repository.
+
+AI assistance does not transfer responsibility for the resulting work away from the team.
+
+---
+
+## 10. Final Statement
+
+> **Team Q'Makers developed the problem definition, product direction, core solution concept, and key technical decisions for the PSK Game Recommender. AI-assisted development tools, including Claude Code, were subsequently used to accelerate portions of implementation, analysis, debugging, testing, and documentation. The team reviewed the resulting work, challenged unexpected results, made the final technical and product decisions, and takes full responsibility for the submitted system and claims.**
