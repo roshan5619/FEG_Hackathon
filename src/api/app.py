@@ -321,6 +321,22 @@ def anonymous_lobby(
     return service().lobby("__anonymous__", row_size=row_size, lang=lang)
 
 
+def _uncached(response: Response) -> Response:
+    """
+    This URL returns a different page depending on the session cookie, so it
+    must never be cached.
+
+    FileResponse sets an ETag and Last-Modified and nothing else, which makes
+    "/" look like a static file. The browser then serves the signed-out page
+    straight from cache after a successful sign-in, and the login silently
+    appears to do nothing - the page simply never changes.
+    """
+    response.headers["Cache-Control"] = "no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Vary"] = "Cookie"
+    return response
+
+
 @app.get("/backend", include_in_schema=False)
 def backend_view():
     """The visualisations: pipeline, learned weights, per-tile attribution."""
@@ -348,5 +364,5 @@ def root(psk_demo_session: Optional[str] = Cookie(default=None),
     signed_in = auth.read_session(psk_demo_session) is not None
     page = DASHBOARD if signed_in else LOGIN
     if os.path.exists(page):
-        return FileResponse(page, media_type="text/html")
+        return _uncached(FileResponse(page, media_type="text/html"))
     return JSONResponse({"detail": "page not built", "try": "/docs"}, status_code=404)

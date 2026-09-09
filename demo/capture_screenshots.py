@@ -107,10 +107,12 @@ class Chrome:
         self.n = 0
         self.send("Network.enable")
         self.send("Page.enable")
-        # Without this Chrome serves "/" from its memory cache after the first
-        # visit, so a newly-set session cookie never reaches the server and the
-        # signed-in pages render as the signed-out one.
-        self.send("Network.setCacheDisabled", cacheDisabled=True)
+        # The cache is deliberately left ON. Disabling it here once hid a real
+        # product bug: "/" was served from cache after sign-in, so the login
+        # appeared to do nothing in a real browser while these screenshots
+        # looked fine. The server now sends no-store on "/", and leaving the
+        # cache enabled means this script would catch it if that regressed.
+        self.send("Network.setCacheDisabled", cacheDisabled=False)
 
     def send(self, method, **params):
         self.n += 1

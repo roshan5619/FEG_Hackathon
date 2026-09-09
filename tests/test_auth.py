@@ -178,6 +178,21 @@ def test_fresh_clears_a_live_session(client):
     assert client.get("/lobby").status_code == 200
 
 
+def test_root_is_never_cached(client):
+    """
+    `/` returns a different page depending on the session cookie, so a cached
+    copy is a real bug, not a nicety: the browser served the signed-out page
+    from cache after a successful sign-in and the login silently appeared to
+    do nothing.
+
+    TestClient has no HTTP cache, so this asserts the header rather than the
+    behaviour - the header is what the browser acts on.
+    """
+    r = client.get("/")
+    assert "no-store" in r.headers.get("cache-control", "")
+    assert "Cookie" in r.headers.get("vary", "")
+
+
 def test_language_switch_translates_the_rows(client):
     """
     The product ships Croatian; English exists so a reviewer who does not read
