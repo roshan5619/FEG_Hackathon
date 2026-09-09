@@ -12,6 +12,10 @@ Team Q'Makers · FEG Innovation Challenge 2026
 
 ---
 
+> **Need the one-page version?** [`compliance-one-pager.md`](compliance-one-pager.md) covers the EU
+> baseline and the responsible-gambling rules on a single page. This document is
+> the full analysis behind it.
+
 ## 0. Why this document is short on promises and long on file paths
 
 A personalisation engine on a gambling platform is the exact thing the EU AI

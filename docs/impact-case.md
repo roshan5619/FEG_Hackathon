@@ -188,7 +188,29 @@ Because §3 is honest, the value case rests on a test, and the test is cheap.
 
 ---
 
-## 7. Risk register
+## 7. Key assumptions
+
+Everything above rests on these. Each is stated with what would show it to be
+wrong, because an assumption you cannot falsify is not an assumption, it is a
+belief.
+
+| # | Assumption | Why we think it holds | What would falsify it |
+|---|---|---|---|
+| 1 | **Offline ranking accuracy is a usable proxy for engagement** | It is the standard offline protocol, and the comparison is like-for-like across every model | The A/B in §6 shows no lift in repeat-played adoptions. **This is the load-bearing one** and it is untested |
+| 2 | **The tail is worth serving** | 76.5% of held-out discovery happens outside the global top 50, and tail games carry a *higher* median stake (€17.00 vs €10.50) | Tail adoptions turn out to be one-off trials that are never replayed |
+| 3 | **Exposure bias flatters popularity, not us** | Players can only choose from what the current lobby shows, and that lobby is a popularity row — so the baseline is measured on its home ground | If PSK's live lobby is more varied than the export suggests, the 4.28× narrows |
+| 4 | **One month of player behaviour generalises** | Game-level features use the full 12 months; only the player-item matrix is one month | Seasonality moves the catalogue; a retrain on a different month reorders the results |
+| 5 | **Retraining daily is enough** | The signal is day-to-day co-occurrence, and the model refits in seconds | Within-session behaviour turns out to dominate, which a daily batch cannot capture |
+| 6 | **Harm indicators arrive from FEG, current and correct** | They are account facts PSK already holds; the recommender never infers them | The fields are stale or unavailable at request time, in which case the gates degrade to whatever the record says |
+| 7 | **A game catalogue is obtainable** | It is a database export of data FEG already has | If it is not, the addressable catalogue stays at 479 of 3,202 and the ~9× does not happen |
+| 8 | **Keeping the popularity row costs nothing** | It is served unchanged, from the same data, behind its own flag | Screen space displaced by new rows reduces head engagement more than the tail rows add |
+
+Assumptions 1 and 2 are the ones worth arguing about. The rest are ordinary
+engineering bets with cheap tests.
+
+---
+
+## 8. Risk register
 
 | Risk | Severity | Mitigation |
 |---|---|---|
@@ -196,12 +218,12 @@ Because §3 is honest, the value case rests on a test, and the test is cheap.
 | The §4 reframe is wrong and discovery genuinely destroys value | **High** | Then the A/B shows it and the row is cut. Bounded downside: *Popularno* is retained unchanged, so the worst case costs screen space, not revenue. |
 | Exposure bias flatters the popularity baseline | Medium | Players choose from what PSK shows them today. This biases §2 **against** the recommender, so the 4.28× is if anything understated. |
 | One month of data, no seasonality | Medium | 12 months exist in `CA_MOM.csv` for game-level features; player-level is one month. Retrain daily. |
-| 83% of catalogue unnameable | Medium | §5.3 — ask FEG for the catalogue. |
+| 58% of stake on unnameable games | Medium | §5.3 — ask FEG for the catalogue. |
 | Personalisation increases play for at-risk players | **High** | Hard gates run **before** scoring; from `MODERATE` every engagement row is withheld. Tested, not asserted — `docs/compliance-note.md`. |
 
 ---
 
-## 8. Reproducing every figure
+## 9. Reproducing every figure
 
 ```bash
 python -m src.cli build --data-dir <FEG csv folder>

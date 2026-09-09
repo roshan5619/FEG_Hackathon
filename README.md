@@ -363,7 +363,8 @@ training interactions.
 | [`docs/evaluation.md`](docs/evaluation.md) | **Protocol, full results, the negative findings, and the limits** |
 | [`docs/architecture.md`](docs/architecture.md) | Components, data flow, FEG stack alignment, what is not built |
 | [`docs/impact-case.md`](docs/impact-case.md) | Value model built on measured coverage, not benchmarks |
-| [`docs/compliance-note.md`](docs/compliance-note.md) | EU AI Act, Croatian binding rules, GDPR — mapped to code and tests |
+| [`docs/compliance-one-pager.md`](docs/compliance-one-pager.md) | **The one-page compliance note** — EU baseline and responsible-gambling rules |
+| [`docs/compliance-note.md`](docs/compliance-note.md) | The full analysis behind it — every claim mapped to code and tests |
 | [`docs/dependencies.md`](docs/dependencies.md) | Third-party components, licences, data provenance |
 | [`docs/ai-use-disclosure.md`](docs/ai-use-disclosure.md) | AI assistance disclosure — what the team originated and where AI assisted |
 | [`demo/presentation/`](demo/presentation/) | The pitch deck (`.pptx`), the story to tell with it, and the script that builds it from `artifacts/` |
