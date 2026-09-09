@@ -62,9 +62,15 @@ CSS framework, no charting library, no build step.
 cosmetic — both faces have fallback stacks. Delete the `<link>` for an
 air-gapped review.
 
-Game tile artwork is generated from a deterministic hash of the title. **No
-stock imagery, icon set or third-party asset is included** — and none could be,
-since 83% of games in the data cannot even be named.
+Game tile artwork is generated SVG, seeded from a deterministic hash of the
+title. **No stock imagery, icon set or third-party asset is included.** Nor
+could it be: 58% of stake is on games the data cannot name, arbitrary stock
+photography beside a named gambling product misrepresents it, and a remote
+image would make the lobby depend on the network at render time.
+
+The two webfonts (Archivo, IBM Plex Mono) are vendored into
+`src/dashboard/fonts/` under the SIL Open Font License 1.1 and served
+locally, so no page reaches a third party to render.
 
 ---
 

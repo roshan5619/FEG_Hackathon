@@ -37,7 +37,8 @@ do — reach the 3,000 games outside the top 50.
    │   responsible.assess()   ◄── HARD GATES, run FIRST                   │
    │            │                 blocked ⇒ return zero rows, never score │
    │            ▼                                                         │
-   │   row builders: continue · because · discover · trending · new       │
+   │   row builders: continue · for-you · discover · jackpot ·            │
+   │                 popular · new                                       │
    │            │                                                         │
    │            ▼                                                         │
    │   display filter (nameable only) · provider cap · dedup              │
@@ -60,8 +61,9 @@ do — reach the 3,000 games outside the top 50.
 ```
 
 **No model is fitted at request time.** `train.py` runs offline and writes
-`model.npz`; the service loads it once (~0.3 s) and a request is a handful of
-sparse lookups — measured at **~60 ms** end to end for a full five-row lobby.
+`model.npz`; the service loads it once (~1.5 s, before the port opens) and a
+request is a handful of sparse lookups — measured at **~27 ms median** end to
+end for a full six-row lobby, across all twelve demo accounts.
 
 ---
 
@@ -89,9 +91,12 @@ challenge brief, which rules out Velocity, PHP, C++, MS SQL and Ignite.
    `NA - Deposit / Withdrawal / Corrections` is dropped from the item space
    entirely; left in, it co-occurs with everything and becomes the most similar
    item to every game on the site.
-3. Interactions are aggregated per (player, game) and split temporally —
-   train 08-01→24, test 08-25→31. Index maps are built from **training only**,
-   so the test window cannot define the item space.
+3. Interactions are aggregated per (player, game) and split temporally into
+   **three** windows — train, validation, test. Hyperparameters are chosen on
+   validation and never on test; an earlier two-way split let the blend
+   weights be swept on the test week, which is why this is three. Index maps
+   are built from **training only**, so later windows cannot define the item
+   space.
 4. Confidence = `log1p(stake)`. Raw stake spans orders of magnitude; one whale
    would otherwise dominate every similarity.
 5. `train.py` fits item-item cosine with shrinkage, keeps the top-300
@@ -188,7 +193,7 @@ the only outbound request and it is cosmetic.
 - **Stateless service**, horizontally scalable. Artifacts are read-only.
 - **Daily retrain** is a batch job whose output is a file; promoting a new
   model is a deploy, not a live retrain.
-- **Latency.** ~60 ms per lobby with no I/O on the request path. The binding
+- **Latency.** ~27 ms per lobby with no I/O on the request path. The binding
   constraint in production would be the player-vector lookup, not scoring.
 
 ---
@@ -205,6 +210,8 @@ does not.
   session, so "what to play next *right now*" is not modelled.
 - **No live exclusion-register integration.** The gate is implemented and
   tested; the caller supplies the flag.
-- **No thumbnails.** 83% of games cannot even be named, let alone illustrated.
-  Tiles use a deterministic colour derived from the title.
+- **No real thumbnails.** 58% of stake is on games that cannot even be named,
+  let alone illustrated. Tiles carry generated SVG artwork instead: a symbol
+  seeded from the title, with roulette, cards, crash, live tables and jackpots
+  overridden where the game type is distinctive. Nothing is fetched at runtime.
 - **No online experiment.** Every number in `docs/evaluation.md` is offline.
