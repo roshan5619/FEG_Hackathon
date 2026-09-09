@@ -193,6 +193,29 @@ def test_root_is_never_cached(client):
     assert "Cookie" in r.headers.get("vary", "")
 
 
+def test_fonts_are_served_locally(client):
+    """
+    The pages must not reach the internet to render. A blocking <link> to a
+    font CDN is a dependency the demo cannot rely on in a venue, and it leaks
+    every page view to a third party.
+    """
+    import re
+    css = client.get("/fonts/fonts.css")
+    assert css.status_code == 200
+    assert "immutable" in css.headers.get("cache-control", "")
+    first = re.findall(r"url\((/fonts/[^)]+)\)", css.text)[0]
+    assert client.get(first).status_code == 200
+
+    for page in ("src/dashboard/index.html", "src/dashboard/login.html",
+                 "src/dashboard/backend.html"):
+        with open(page, encoding="utf-8") as fh:
+            html = fh.read()
+        assert 'href="https://fonts.' not in html, page
+        assert '/fonts/fonts.css' in html, page
+
+    assert client.get("/fonts/../api/app.py").status_code == 404
+
+
 def test_language_switch_translates_the_rows(client):
     """
     The product ships Croatian; English exists so a reviewer who does not read

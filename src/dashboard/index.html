@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PSK Casino — Personalizirani lobi</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<!-- Fonts are served from this repo, not the internet. A blocking
+     <link> to fonts.googleapis.com made every navigation wait on
+     the network: 16.6s to first paint on a degraded connection. -->
+<link rel="stylesheet" href="/fonts/fonts.css">
 <style>
 /* Structure and row naming mirror the live casino.psk.hr lobby so this reads as
    a feature of that product. Dark ground, as every casino lobby ships. */
@@ -108,7 +109,7 @@ select.player{background:var(--raise);color:var(--ink);border:1px solid var(--ru
 .tile:hover{transform:translateY(-3px);border-color:var(--accent)}
 .art{height:112px;position:relative;display:flex;align-items:center;justify-content:center;
   font-family:var(--mono);font-size:30px;font-weight:600;color:rgba(255,255,255,.86);letter-spacing:-.03em}
-.art::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.5))}
+.art::after{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.5))}
 .badges{position:absolute;top:6px;left:6px;display:flex;flex-wrap:wrap;gap:4px;z-index:2}
 .bdg{font-family:var(--mono);font-size:8.5px;font-weight:600;letter-spacing:.06em;
   padding:2px 5px;border-radius:2px;color:#0a0e14;background:var(--muted)}
@@ -140,6 +141,16 @@ select.player{background:var(--raise);color:var(--ink);border:1px solid var(--ru
 .note code{font-family:var(--mono);font-size:11.5px;background:var(--raise);padding:1px 5px;border-radius:2px}
 footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
 .loading{padding:44px 0;color:var(--muted);font-family:var(--mono);font-size:13px}
+.art{position:relative;overflow:hidden}
+.art .motif{position:absolute;inset:0;width:100%;height:100%;opacity:.9}
+.art .mono{position:absolute;right:9px;bottom:7px;z-index:2;
+  font-family:var(--mono);font-size:19px;font-weight:600;
+  color:rgba(255,255,255,.92);text-shadow:0 1px 6px rgba(0,0,0,.55);
+  letter-spacing:.02em}
+.tile{transition:transform .12s ease,border-color .12s ease}
+.tile:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.26)}
+@media (prefers-reduced-motion:reduce){.tile{transition:none}
+  .tile:hover{transform:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -245,20 +256,66 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
   var state={player:null,flags:{},deposits:0,user:null};
 
   function hue(s){ var h=0; for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return h%360; }
-  function art(t,badges){
-    var h=hue(t), d=el("div","art");
-    d.style.background="linear-gradient(140deg,hsl("+h+" 45% 32%),hsl("+((h+40)%360)+" 48% 18%))";
+
+  // Symbols on a 0 0 100 100 viewBox. Casino iconography is varied, so the
+  // symbol is picked from the title hash and stays stable for a given game.
+  var MOTIF={
+    seven:'<path d="M26 20 H74 L46 84 H28 L56 34 H26 Z"/>',
+    bell:'<path d="M50 12 A7 7 0 0 1 57 19 C71 25 75 40 75 56 L82 72 H18 L25 56 C25 40 29 25 43 19 A7 7 0 0 1 50 12 Z"/><path d="M39 76 A11 11 0 0 0 61 76"/>',
+    clover:'<circle cx="50" cy="30" r="15"/><circle cx="30" cy="50" r="15"/><circle cx="70" cy="50" r="15"/><circle cx="50" cy="70" r="15"/><path d="M50 70 V92" fill="none"/>',
+    star:'<path d="M50 8 L61 38 H93 L67 57 L77 88 L50 69 L23 88 L33 57 L7 38 H39 Z"/>',
+    gem:'<path d="M32 18 H68 L88 42 L50 88 L12 42 Z"/><path d="M12 42 H88 M32 18 L50 42 L68 18 M50 42 V88" fill="none"/>',
+    crown:'<path d="M8 70 L20 30 L36 52 L50 22 L64 52 L80 30 L92 70 Z"/><rect x="8" y="76" width="84" height="12" rx="3"/>',
+    bolt:'<path d="M58 6 L26 54 H46 L40 94 L74 44 H52 Z"/>',
+    coin:'<circle cx="50" cy="50" r="40" fill="none"/><circle cx="50" cy="50" r="24" fill="none"/>',
+    dice:'<rect x="16" y="16" width="68" height="68" rx="12" fill="none"/><circle cx="36" cy="36" r="6"/><circle cx="64" cy="36" r="6"/><circle cx="50" cy="50" r="6"/><circle cx="36" cy="64" r="6"/><circle cx="64" cy="64" r="6"/>',
+    horseshoe:'<path d="M28 90 V52 A22 22 0 0 1 72 52 V90" fill="none"/><path d="M28 90 H42 M58 90 H72" fill="none"/>',
+    roulette:'<circle cx="50" cy="50" r="42" fill="none"/><circle cx="50" cy="50" r="16" fill="none"/><path d="M50 8 V26 M50 74 V92 M8 50 H26 M74 50 H92 M20 20 L33 33 M67 67 L80 80 M80 20 L67 33 M33 67 L20 80" fill="none"/>',
+    card:'<path d="M50 88 C22 66 10 52 10 36 A20 20 0 0 1 50 30 A20 20 0 0 1 90 36 C90 52 78 66 50 88 Z"/>',
+    crash:'<path d="M8 84 L34 54 L52 68 L92 20" fill="none"/><path d="M92 20 H70 M92 20 V42" fill="none"/>',
+    table:'<ellipse cx="50" cy="30" rx="34" ry="12" fill="none"/><path d="M16 30 V56 A34 12 0 0 0 84 56 V30" fill="none"/>'
+  };
+  var PICK=["seven","bell","clover","star","gem","bolt","coin","dice","horseshoe","crown"];
+  function motifFor(t,type){
+    var s=((type||"")+" ").toLowerCase(), n=(t||"").toLowerCase();
+    if(/roulette|wheel/.test(s+n)) return "roulette";
+    if(/blackjack|poker|baccarat|\bcard/.test(s+n)) return "card";
+    if(/crash|aviator/.test(s+n)) return "crash";
+    if(/live|table/.test(s)) return "table";
+    return PICK[hue(t||"?")%PICK.length];
+  }
+  var ART_N=0;
+  function art(t,badges,type){
+    var name=t||"?", h=hue(name), h2=(h+34)%360, d=el("div","art");
+    var key=motifFor(name,type);
+    var jack=/jackpot/.test(((type||"")+" "+name).toLowerCase());
+    if(jack) key="crown";
+    var uid="g"+(ART_N++);
+    d.style.background = jack
+      ? "linear-gradient(150deg,hsl(41 58% 30%),hsl(26 55% 12%))"
+      : "linear-gradient(150deg,hsl("+h+" 52% 30%),hsl("+h2+" 55% 13%))";
+    d.innerHTML='<svg class="motif" viewBox="0 0 100 100" aria-hidden="true">'+
+      '<defs><radialGradient id="'+uid+'" cx="26%" cy="18%" r="90%">'+
+      '<stop offset="0" stop-color="#fff" stop-opacity=".26"/>'+
+      '<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>'+
+      '<rect width="100" height="100" fill="url(#'+uid+')"/>'+
+      '<g transform="translate(50 50) scale(.62) translate(-50 -50)" '+
+      'fill="rgba(255,255,255,.20)" stroke="rgba(255,255,255,.46)" '+
+      'stroke-width="4" stroke-linejoin="round" stroke-linecap="round">'+
+      MOTIF[key]+'</g></svg>';
     if(badges&&badges.length){
       var b=el("div","badges");
       badges.forEach(function(x){ b.appendChild(el("span","bdg "+x.replace(/\s+/g,""),esc(x))); });
       d.appendChild(b);
     }
-    d.appendChild(document.createTextNode(t.replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase()));
+    d.appendChild(el("span","mono",
+      esc(String(name).replace(/[^A-Za-z0-9]/g,"").slice(0,2).toUpperCase())));
     return d;
   }
+
   function tile(t,personalised){
     var d=el("div","tile"+(t.named===false?" unnamed":"")+(personalised?"":" global"));
-    d.appendChild(art(t.title,t.badges));
+    d.appendChild(art(t.title,t.badges,t.game_type));
     var b=el("div","body");
     b.appendChild(el("div","tname",esc(t.title)));
     b.appendChild(el("div","tprov",esc(t.provider||"—")));
@@ -360,8 +417,18 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
       '<span class="sm">'+esc(u.username)+"</span>");
     var out=el("button",null,T("Sign out","Odjava"));
     out.addEventListener("click",function(){
-      fetch("/logout",{method:"POST",credentials:"same-origin"})
-        .then(function(){ window.location.href="/"; });
+      // Leave regardless of what /logout answers. The previous version only
+      // navigated inside .then(), so any failed or slow request left the
+      // person sitting on a dead button with no feedback. The cookie is
+      // cleared server-side by /logout and again by ?fresh=1 on arrival, so
+      // signing out still really signs out even if this request is lost.
+      out.disabled = true;
+      out.textContent = T("Signing out\u2026", "Odjava\u2026");
+      var go = function(){ window.location.replace("/?fresh=1"); };
+      var bail = setTimeout(go, 1500);
+      fetch("/logout", {method:"POST", credentials:"same-origin"})
+        .then(function(){ clearTimeout(bail); go(); })
+        .catch(function(){ clearTimeout(bail); go(); });
     });
     host.appendChild(av); host.appendChild(nm); host.appendChild(out);
 

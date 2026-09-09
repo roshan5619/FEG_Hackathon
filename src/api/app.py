@@ -262,7 +262,10 @@ def login(req: LoginRequest, response: Response) -> Dict[str, Any]:
 
 @app.post("/logout")
 def logout(response: Response) -> Dict[str, Any]:
-    response.delete_cookie(auth.COOKIE_NAME)
+    # The attributes must match set_cookie or the browser keeps the old cookie
+    # and "sign out" silently does nothing.
+    response.delete_cookie(auth.COOKIE_NAME, path="/", httponly=True,
+                           samesite="lax")
     return {"ok": True}
 
 
@@ -319,6 +322,29 @@ def anonymous_lobby(
 ) -> Dict[str, Any]:
     """What a visitor who has not signed in sees. Identical for everyone."""
     return service().lobby("__anonymous__", row_size=row_size, lang=lang)
+
+
+FONTS = os.path.join(REPO, "src", "dashboard", "fonts")
+
+
+@app.get("/fonts/{name}", include_in_schema=False)
+def font(name: str):
+    """
+    The webfonts, served locally.
+
+    Loading them from fonts.googleapis.com made every page navigation block on
+    the internet, which is what "the site keeps buffering" was. Unlike the
+    pages, these are immutable, so they get a long cache lifetime.
+    """
+    if "/" in name or "\\" in name or ".." in name:
+        raise HTTPException(404, "not found")
+    path = os.path.join(FONTS, name)
+    if not os.path.exists(path):
+        raise HTTPException(404, "not found")
+    media = "text/css" if name.endswith(".css") else "font/woff2"
+    r = FileResponse(path, media_type=media)
+    r.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return r
 
 
 def _uncached(response: Response) -> Response:
