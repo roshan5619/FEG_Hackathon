@@ -202,7 +202,7 @@ test window, NDCG@10:
 | item-item CF | 0.0490 | 731 | 2.96× |
 | most_played | 0.0165 | 29 | 1.00× |
 
-On **overall** discovery, popularity still wins outright (0.305 vs 0.056 for
+On **overall** discovery, popularity still wins outright (0.2110 vs 0.0489 for
 CF). That is why *Popularno* is kept unchanged. Full tables, protocol and
 limits: [`evaluation.md`](evaluation.md).
 

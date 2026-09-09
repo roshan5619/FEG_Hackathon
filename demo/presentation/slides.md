@@ -2,10 +2,12 @@
 
 **PSK Personalised Lobby** · Team Q'Makers · FEG Innovation Challenge 2026
 
-A ready-to-present HTML version of this deck exists; this file is the source
-content so it can be rebuilt as `.pptx` if FEG expects that format. Every figure
-here is computed by `src/pipeline/build_dataset.py` and
-`src/recsys/evaluate.py` — see [`docs/evaluation.md`](../../docs/evaluation.md).
+**The deck itself is [`QMakers_PSK_Deck.pptx`](QMakers_PSK_Deck.pptx)**, built by
+[`build_deck.py`](build_deck.py) — re-run that script after any edit here rather
+than hand-editing slides, because it reads its figures straight from
+`artifacts/` and so cannot silently go stale. This file is the source content
+and the speaker's reference. Method and full tables:
+[`docs/evaluation.md`](../../docs/evaluation.md).
 
 > **The old `MindTheGap_Pitch_Deck.pptx` is obsolete.** It describes an
 > abandoned sportsbook session-intelligence concept and must not be submitted.
@@ -84,9 +86,9 @@ outright by the global popularity row PSK already ships.
 
 | Model | NDCG@10 |
 |---|---|
-| **most_played** | **0.305** |
-| provider_popular | 0.174 |
-| item-item CF | 0.056 |
+| **most_played** | **0.2110** |
+| provider_popular | 0.1350 |
+| item-item CF | 0.0489 |
 
 Discovery task, 9,102 players. We tuned hard before accepting it — popularity
 correction, shrinkage, neighbourhood size, and a popularity-blended hybrid
@@ -280,10 +282,10 @@ harder than any slide about it.
 live) → slide 5 (we lost) → slide 6 (4.28×, 732 games vs 29) → slide 9 (the
 catalogue ask).
 
-**Numbers to never round up:** 74%, 0.305, 0.056, 0.0708, 4.28×, 25×, 76.5%,
+**Numbers to never round up:** 74%, 0.2110, 0.0489, 0.0708, 4.28×, 25×, 76.5%,
 54%, 58.4%, 54 tests.
 
-**Expect this question:** *"Isn't 0.046 a tiny NDCG?"* — Yes, in absolute
+**Expect this question:** *"Isn't 0.0708 a tiny NDCG?"* — Yes, in absolute
 terms, and it should be: predicting which of 3,000 games someone tries next
 week is a hard task with few positives per player. The comparison is what
 matters, and it is against the same task for every model.

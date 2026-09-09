@@ -56,7 +56,7 @@ of all discovery happens:
 | Item-item CF | 0.0490 | 731 | 2.96× |
 | `most_played` (live today) | 0.0165 | 29 | 1.00× |
 
-On **overall** discovery, popularity still wins outright (0.305 vs 0.056 for
+On **overall** discovery, popularity still wins outright (0.2110 vs 0.0489 for
 CF). We kept it unchanged as the *Popularno* row for exactly that reason. The
 recommender is additive: it reaches the 3,000 games popularity structurally
 cannot.
@@ -117,7 +117,7 @@ prototype ships:
 > **Exploration currently correlates with lower value because exploration
 > currently fails.**
 
-A player hunting through a search box and a 41-game list is behaving like
+A player hunting through a search box and a 32-game list is behaving like
 someone who has not found what they want. Exploration on psk.hr today is
 plausibly a **symptom of dissatisfaction, not a driver of it** — which is
 exactly what §3.3 would look like.
@@ -172,7 +172,7 @@ export would recover the rest. **One file, ~9× the addressable inventory.**
 Because §3 is honest, the value case rests on a test, and the test is cheap.
 
 - **Design:** A/B on the lobby. Control = today's static rows. Treatment = the
-  five personalised rows. Randomise by player, run four weeks.
+  six personalised rows. Randomise by player, run four weeks.
 - **Primary metric:** *successful* discovery — first-time game adoptions
   **that are played again within 7 days**. This distinguishes "found something
   good" from "tried and bounced", which §3.3 cannot.

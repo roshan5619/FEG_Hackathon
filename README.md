@@ -81,7 +81,7 @@ A hybrid lobby. Six rows, each justified by a measured result rather than a
 guess — including one result that went against us.
 
 > **Collaborative filtering loses to "most played" on next-game prediction, and
-> loses badly: NDCG@10 0.056 against 0.305.** We tuned it hard before accepting
+> loses badly: NDCG@10 0.0489 against 0.2110.** We tuned it hard before accepting
 > that — swept popularity correction, shrinkage, neighbourhood size, and a
 > popularity-blended hybrid across eight weights. Nothing beat plain popularity.
 >
@@ -360,7 +360,9 @@ training interactions.
 | [`docs/impact-case.md`](docs/impact-case.md) | Value model built on measured coverage, not benchmarks |
 | [`docs/compliance-note.md`](docs/compliance-note.md) | EU AI Act, Croatian binding rules, GDPR — mapped to code and tests |
 | [`docs/dependencies.md`](docs/dependencies.md) | Third-party components, licences, data provenance |
-| [`docs/ai-use-disclosure.md`](docs/ai-use-disclosure.md) | AI assistance disclosure — **has items the team must confirm** |
+| [`docs/ai-use-disclosure.md`](docs/ai-use-disclosure.md) | AI assistance disclosure — what the team originated and where AI assisted |
+| [`demo/presentation/`](demo/presentation/) | The pitch deck (`.pptx`) and the script that builds it from `artifacts/` |
+| [`demo/live-demo.md`](demo/live-demo.md) | Live-demo runbook: pre-flight, run of show, failure recovery, expected questions |
 
 ---
 
@@ -382,10 +384,10 @@ outputs. 18 MB total.
 | | |
 |---|---|
 | **Team name** | Q'Makers |
-| **Team lead** | `Bandlapalli Roshan Babu` |
-| **Members** | `C.Kavya Sri , M.Yashwanth]` |
-| **Contact** | `broshann14@gmail.com` |
+| **Team lead** | Bandlapalli Roshan Babu |
+| **Members** | C. Kavya Sri · M. Yashwanth |
+| **Contact** | <broshann14@gmail.com> |
 
-> ⚠️ Fill this in before submitting. The demo is given live — the runbook,
-> failure recovery and expected questions are in
-> [`demo/live-demo.md`](demo/live-demo.md).
+The demo is given live rather than recorded — the runbook, failure recovery and
+the questions to expect are in [`demo/live-demo.md`](demo/live-demo.md), and the
+deck is [`demo/presentation/QMakers_PSK_Deck.pptx`](demo/presentation/QMakers_PSK_Deck.pptx).

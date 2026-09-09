@@ -90,7 +90,7 @@ Personalised rows change completely. *Popularno* is identical.
 **2:10 — The honest part. Second tab: `/backend`.**
 
 > "On predicting the next game a player tries, our recommender **lost** to
-> most-played — NDCG@10 0.056 against 0.305. We tuned hard before accepting it.
+> most-played — NDCG@10 0.049 against 0.211. We tuned hard before accepting it.
 > What players try next is overwhelmingly what's already popular.
 >
 > So we kept the popularity row. But it can only ever reach 32 games out of
@@ -140,7 +140,7 @@ nothing changes.
 
 ## Questions to expect
 
-**"Isn't 0.046 a tiny NDCG?"**
+**"Isn't 0.0708 a tiny NDCG?"**
 Yes, in absolute terms, and it should be — predicting which of 3,000 games
 someone plays next week is hard, with few positives per player. The comparison
 is what matters, and every model faces the identical task.
