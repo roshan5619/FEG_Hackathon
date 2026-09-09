@@ -29,6 +29,7 @@ from src.api import auth
 from src.pipeline.build_dataset import ART
 from src.recsys import responsible as rp
 from src.recsys.serve import LobbyService
+from src.recsys.strings import DEFAULT_LANG
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 DASHBOARD = os.path.join(REPO, "src", "dashboard", "index.html")
@@ -122,6 +123,7 @@ def recommendations(
     deposits_this_session: int = 0,
     stake_above_own_history: bool = False,
     chasing_losses: bool = False,
+    lang: str = Query(DEFAULT_LANG, description="ui copy: en or hr"),
 ) -> Dict[str, Any]:
     """
     The personalised lobby for one player.
@@ -138,7 +140,8 @@ def recommendations(
         "chasing_losses": chasing_losses or None,
     }
     player = {k: v for k, v in player.items() if v is not None}
-    return service().lobby(player_id, player=player, row_size=row_size)
+    return service().lobby(player_id, player=player, row_size=row_size,
+                           lang=lang)
 
 
 @app.get("/evaluation")
@@ -239,13 +242,13 @@ def login(req: LoginRequest, response: Response) -> Dict[str, Any]:
     user = auth.authenticate(req.username, req.password)
     if user is None:
         # Identical message either way: never reveal whether a username exists.
-        raise HTTPException(401, "Neispravno korisnicko ime ili lozinka.")
+        raise HTTPException(401, "Incorrect username or password.")
 
     flags = auth.player_flags(user)
     state = rp.assess({"player": flags})
     if state.hard_gate and not flags.get("self_excluded"):
         raise HTTPException(403, {
-            "message": "Prijava odbijena: provjera dobi/identiteta nije prosla.",
+            "message": "Sign-in refused: age & identity verification not passed.",
             "state": state.state,
             "reasons": state.reasons,
             "required_surfaces": state.required_surfaces,
@@ -290,7 +293,9 @@ def demo_accounts() -> Dict[str, Any]:
 
 @app.get("/lobby")
 def lobby(psk_demo_session: Optional[str] = Cookie(default=None),
-          row_size: int = Query(10, ge=1, le=20)) -> Dict[str, Any]:
+          row_size: int = Query(10, ge=1, le=20),
+          lang: str = Query(DEFAULT_LANG, description="ui copy: en or hr"),
+          ) -> Dict[str, Any]:
     """
     The signed-in player's lobby.
 
@@ -301,15 +306,19 @@ def lobby(psk_demo_session: Optional[str] = Cookie(default=None),
     if user is None:
         raise HTTPException(401, "Not signed in.")
     out = service().lobby(user["player_id"],
-                          player=auth.player_flags(user), row_size=row_size)
+                          player=auth.player_flags(user), row_size=row_size,
+                          lang=lang)
     out["user"] = auth.public_user(user)
     return out
 
 
 @app.get("/anonymous-lobby")
-def anonymous_lobby(row_size: int = Query(10, ge=1, le=20)) -> Dict[str, Any]:
+def anonymous_lobby(
+    row_size: int = Query(10, ge=1, le=20),
+    lang: str = Query(DEFAULT_LANG, description="ui copy: en or hr"),
+) -> Dict[str, Any]:
     """What a visitor who has not signed in sees. Identical for everyone."""
-    return service().lobby("__anonymous__", row_size=row_size)
+    return service().lobby("__anonymous__", row_size=row_size, lang=lang)
 
 
 @app.get("/backend", include_in_schema=False)

@@ -62,8 +62,9 @@ Click, submit. Two rows become six.
 
 Then slow down and name what changed:
 
-> "*Nastavi igrati* is her own history. *Preporučeno za tebe* and *Otkrij nešto
-> novo* are the trained model. And **Popularno is still there, unchanged** —
+> "*Continue playing* is her own history. *Picked for you* and *Discover
+> something new* are the trained model. And **Popular is still there,
+> unchanged** —
 > that's deliberate, and in about ninety seconds I'll tell you why, because it's
 > the most interesting thing we found."
 
@@ -72,7 +73,8 @@ reveal you're building to, rather than a confession.
 
 Then read one tile aloud:
 
-> "*Jer igraš 3 Mystic Lamps Buy Bonus.* That is not a sentence we generated.
+> "*Because you play 3 Mystic Lamps Buy Bonus.* That is not a sentence we
+> generated.
 > It's the single feature with the largest weight times value in the model's own
 > score. We can reconstruct the model's exact probability from what's printed on
 > that tile — and there's a test that asserts it."
@@ -194,7 +196,7 @@ Close on the opening line:
 | From → To | Say |
 |---|---|
 | Problem → Demo | "So we built the version where it does." |
-| Demo → The loss | "I said I'd tell you why Popularno is still there." |
+| Demo → The loss | "I said I'd tell you why Popular is still there." |
 | Loss → Tail win | "But then we asked what popularity can *never* do." |
 | Tail → How it works | "So how does the thing that wins the tail actually work?" |
 | Model → Compliance | "This is a gambling product, so the more important question is what it refuses to do." |

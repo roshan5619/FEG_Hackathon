@@ -51,6 +51,11 @@ with one-click fill. Two behave differently on purpose:
 
 On Windows you can also just double-click **`run.bat`**.
 
+The UI is **English by default** so a reviewer can read the rows; the product
+ships Croatian for PSK, and `?lang=hr` switches the whole lobby back — row
+names, tile reasons and badges all come from one string table
+([`src/recsys/strings.py`](src/recsys/strings.py)).
+
 `demo` always opens **signed out**, clearing any session from an earlier run —
 the first thing you should see is the two-row anonymous lobby. Presenting this?
 [`demo/live-demo.md`](demo/live-demo.md) has the run of show, the failure

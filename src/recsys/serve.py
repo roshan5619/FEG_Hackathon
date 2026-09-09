@@ -34,6 +34,7 @@ import numpy as np
 
 from src.pipeline.build_dataset import load
 from src.recsys import responsible as rp
+from src.recsys.strings import DEFAULT_LANG, t as strings_for
 from src.recsys.train import HEAD_N, load_model
 
 DEFAULT_ROW_SIZE = 10
@@ -188,7 +189,7 @@ class LobbyService:
         scores = np.where(unscored, floor * 1e-6, scores + 1.0)
         return scores.astype(np.float32)
 
-    def _why(self, urow: int, item: int) -> str:
+    def _why(self, urow: int, item: int, T) -> str:
         """
         The literal largest contributor to this score - a decomposition, not a
         generated rationale. Sequence and CF are checked separately so the copy
@@ -196,7 +197,7 @@ class LobbyService:
         """
         played = self.X[urow].indices
         if len(played) == 0:
-            return "Popularno na PSK-u"
+            return T["why_popular"]
 
         seq_c = (np.asarray(self.R[urow, played].todense()).ravel()
                  * np.asarray(self.seq[played, item].todense()).ravel())
@@ -205,43 +206,45 @@ class LobbyService:
         best_seq = float(seq_c.max()) if seq_c.size else 0.0
         best_cf = float(cf_c.max()) if cf_c.size else 0.0
         if max(best_seq, best_cf) <= 0:
-            return "Slicno igrama koje igras"
+            return T["why_similar"]
 
         use_seq = best_seq * self.w_seq >= best_cf * self.w_cf
         src = int(played[int(np.argmax(seq_c if use_seq else cf_c))])
         title = (self.catalog.get(self.items[src]) or {}).get("title")
         if not title:
-            return "Slicno igrama koje igras"
-        return ("Nakon %s igraci cesto igraju ovu" % title) if use_seq \
-            else ("Jer igras %s" % title)
+            return T["why_similar"]
+        return (T["why_seq"] % title) if use_seq \
+            else (T["why_cf"] % title)
 
     # -- tiles -------------------------------------------------------------
-    def _badges(self, g: Dict) -> List[str]:
+    def _badges(self, g: Dict, T) -> List[str]:
         out = []
         if g.get("is_new"):
-            out.append("NOVO")
+            out.append(T["badge_new"])
         if g.get("has_jackpot"):
-            out.append("JACKPOT")
+            out.append(T["badge_jackpot"])
         if (g.get("momentum") or 0) >= 2.0:
-            out.append("U PORASTU")
+            out.append(T["badge_rising"])
         return out
 
-    def _tile(self, idx: int, score: float, why: str, allow_unnamed: bool = False):
+    def _tile(self, idx: int, score: float, why: str, T,
+              allow_unnamed: bool = False):
         code = self.items[idx]
         g = self.catalog.get(code) or {}
         if g.get("displayable") and g.get("title"):
             return Tile(code=code, title=g["title"], provider=g.get("provider"),
                         game_type=g.get("game_type"), score=score, why=why,
-                        badges=self._badges(g))
+                        badges=self._badges(g, T))
         if not allow_unnamed:
             return None
         prov = g.get("provider")
         kind = _kind_of(g.get("game_type"))
         return Tile(code=code, title=("%s %s" % (prov, kind)) if prov else kind.capitalize(),
                     provider=prov, game_type=g.get("game_type"), score=score,
-                    why="U tvojoj povijesti · naziv nije u katalogu", named=False)
+                    why=T["why_unnamed"], named=False)
 
-    def _take(self, order, scores, why_fn, n, exclude, allow_unnamed=False):
+    def _take(self, order, scores, why_fn, n, exclude, T,
+              allow_unnamed=False):
         out: List[Tile] = []
         per_provider: Dict[Optional[str], int] = {}
         for idx in order:
@@ -255,7 +258,7 @@ class LobbyService:
             # to a player's own history - if they only play Amusnet, so be it.
             if not allow_unnamed and per_provider.get(prov, 0) >= MAX_PER_PROVIDER:
                 continue
-            t = self._tile(i, float(scores[i]), why_fn(i), allow_unnamed)
+            t = self._tile(i, float(scores[i]), why_fn(i), T, allow_unnamed)
             if t is None:
                 continue
             out.append(t)
@@ -267,7 +270,9 @@ class LobbyService:
 
     # -- the lobby ---------------------------------------------------------
     def lobby(self, player_id: str, player: Optional[Dict[str, Any]] = None,
-              row_size: int = DEFAULT_ROW_SIZE) -> Dict[str, Any]:
+              row_size: int = DEFAULT_ROW_SIZE,
+              lang: str = DEFAULT_LANG) -> Dict[str, Any]:
+        T = strings_for(lang)
         state = rp.assess({"player": player or {}})
         known = player_id in self.row_of
 
@@ -296,35 +301,37 @@ class LobbyService:
             recent = self.R[urow].toarray().ravel()
             n_recent = int((recent > 0).sum())
             tiles = self._take(np.argsort(-recent)[:n_recent], recent,
-                               lambda i: "Nedavno si igrao", row_size, set(),
+                               lambda i: T["why_recent"], row_size, set(), T,
                                allow_unnamed=True)
             if tiles:
-                rows.append(Row("continue", "Nastavi igrati",
-                                "Igre koje si nedavno igrao",
+                rows.append(Row("continue", T["row_continue"][0],
+                                T["row_continue"][1],
                                 "recency_profile", True, tiles))
 
             excl = set(played)
-            tiles = self._take(order, score, lambda i: self._why(urow, i), row_size, excl)
+            tiles = self._take(order, score, lambda i: self._why(urow, i, T),
+                               row_size, excl, T)
             if tiles:
-                rows.append(Row("for_you", "Preporuceno za tebe",
-                                "Na temelju onoga sto si igrao",
+                rows.append(Row("for_you", T["row_for_you"][0],
+                                T["row_for_you"][1],
                                 "sequence+cf", True, tiles))
 
             shown = {self.index_of[t.code] for r in rows for t in r.tiles}
             excl2 = set(played) | self.head | shown
-            tiles = self._take(order, score, lambda i: self._why(urow, i), row_size, excl2)
+            tiles = self._take(order, score, lambda i: self._why(urow, i, T),
+                               row_size, excl2, T)
             if tiles:
-                rows.append(Row("discover", "Otkrij nesto novo",
-                                "Izvan top 50 – gdje personalizacija pobjeduje",
+                rows.append(Row("discover", T["row_discover"][0],
+                                T["row_discover"][1],
                                 "sequence+cf_tail", True, tiles))
 
             jp = sorted((i for i in self.jackpot_items if i not in played),
                         key=lambda i: -score[i])
             tiles = self._take(np.asarray(jp, dtype=np.int64), score,
-                               lambda i: "Jackpot igra", row_size, set())
+                               lambda i: T["why_jackpot"], row_size, set(), T)
             if tiles:
-                rows.append(Row("jackpot", "Jackpoti",
-                                "Igre s jackpotom, poredane prema tvom ukusu",
+                rows.append(Row("jackpot", T["row_jackpot"][0],
+                                T["row_jackpot"][1],
                                 "jackpot+personalised", True, tiles))
         else:
             envelope["cold_start"] = (
@@ -333,18 +340,18 @@ class LobbyService:
                 "history, and pretending otherwise would be dishonest.")
 
         tiles = self._take(np.argsort(-self.pop), self.pop,
-                           lambda i: "Popularno na PSK-u", row_size, set())
+                           lambda i: T["why_popular"], row_size, set(), T)
         if tiles:
-            rows.append(Row("popular", "Popularno",
-                            "Najigranije na PSK-u – red koji PSK vec ima",
+            rows.append(Row("popular", T["row_popular"][0],
+                            T["row_popular"][1],
                             "most_played", False, tiles))
 
         new = sorted(self.new_items, key=lambda i: -self.pop[i])
         tiles = self._take(np.asarray(new, dtype=np.int64), self.pop,
-                           lambda i: "Novo na PSK-u", row_size, set())
+                           lambda i: T["why_new"], row_size, set(), T)
         if tiles:
-            rows.append(Row("new", "Nove igre",
-                            "Prvi put objavljene u zadnja 3 mjeseca",
+            rows.append(Row("new", T["row_new"][0],
+                            T["row_new"][1],
                             "game_age", False, tiles))
 
         if state.suppresses_conversion:

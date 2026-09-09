@@ -26,8 +26,8 @@ python -m src.cli demo
 **Checks before you present:**
 
 - [ ] `54 passed` — if not, do not demo from this machine
-- [ ] The browser opens on the **anonymous** lobby: two rows, *Popularno* and
-      *Nove igre*. If you see six rows, the reset failed — see below.
+- [ ] The browser opens on the **anonymous** lobby: two rows, *Popular* and
+      *New games*. If you see six rows, the reset failed — see below.
 - [ ] A second tab loaded on <http://127.0.0.1:8000/backend>
 - [ ] Terminal font large enough to read from the back of the room
 - [ ] Laptop on mains power, sleep and notifications off
@@ -51,7 +51,7 @@ Three you must know by name:
 | `ana.k` | A heavy player, 177 games — the richest personalisation |
 | `davor.z` | **Sign-in refused** — age/ID unverified |
 | `lucija.h` | **Signs in, zero rows** — self-excluded |
-| `tomislav.j` | MODERATE risk — only *Nastavi igrati* survives |
+| `tomislav.j` | MODERATE risk — only *Continue playing* survives |
 
 ---
 
@@ -70,20 +70,21 @@ Click the account to fill it, submit. Two rows become six.
 
 > "Same page. Now it knows who's looking at it."
 
-Name the rows as they land: *Nastavi igrati* is her own history,
-*Preporučeno za tebe* and *Otkrij nešto novo* are the trained ranker,
-*Popularno* is unchanged — **that's deliberate, and it's the next slide.**
+Name the rows as they land: *Continue playing* is her own history,
+*Picked for you* and *Discover something new* are the trained ranker,
+*Popular* is unchanged — **that's deliberate, and it's the next slide.**
 
 **1:20 — Read a tile out loud.**
 
-> "*Jer igraš 4 Scarab Coins: Hold and Win.* That is not a generated sentence.
+> "*Because you play 4 Scarab Coins: Hold and Win.* That is not a generated
+> sentence.
 > It's the literal top contributor to that score — the feature with the largest
 > weight × value in the logistic regression. We can reconstruct the model's
 > exact probability from what's on the tile, and there's a test that asserts it."
 
 **1:50 — Sign out, sign in as a different account.**
 
-Personalised rows change completely. *Popularno* is identical.
+Personalised rows change completely. *Popular* is identical.
 
 > "That contrast is the argument."
 
@@ -111,7 +112,7 @@ Sign in as `lucija.h` → **succeeds**, lobby is empty.
 > account and support. But zero recommendations. Not filtered. **Never scored** —
 > the gate runs before the model."
 
-Then `tomislav.j`: MODERATE, only *Nastavi igrati* survives, and the withheld
+Then `tomislav.j`: MODERATE, only *Continue playing* survives, and the withheld
 rows are returned in the response so the decision is auditable.
 
 **3:40 — Close.**

@@ -45,13 +45,13 @@ PASSWORD = "psk2026"          # same for every demo account, shown on screen
 RG_ACCOUNTS = {
     9: {"label": "MODERATE",
         "flags": {"deposits_this_session": 3, "stake_above_own_history": True},
-        "note": "Rizik otkriven — svi redovi koji potiču igru su povučeni."},
+        "note": "Risk detected - every engagement row is withheld."},
     10: {"label": "BLOCKED",
          "flags": {"self_excluded": True},
-         "note": "Samoisključen — prijava radi, ali nema nijedne preporuke."},
+         "note": "Self-excluded - sign-in works, but there are no recommendations."},
     11: {"label": "AGE_UNVERIFIED",
          "flags": {"age_verified": False},
-         "note": "Dob nije potvrđena — prijava se odbija prije pristupa igrama."},
+         "note": "Age not verified - sign-in is refused before any access to games."},
 }
 
 
@@ -86,7 +86,7 @@ def describe(svc, row: int) -> Dict:
     return {
         "games_played": int(len(idx)),
         "named_games": named,
-        "top_game": top_title or "(naziv nije u katalogu)",
+        "top_game": top_title or "(title not in the catalogue)",
         "also_bets_sport": sb["top_sport"] if sb else None,
     }
 

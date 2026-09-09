@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="hr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -112,9 +112,10 @@ select.player{background:var(--raise);color:var(--ink);border:1px solid var(--ru
 .badges{position:absolute;top:6px;left:6px;display:flex;flex-wrap:wrap;gap:4px;z-index:2}
 .bdg{font-family:var(--mono);font-size:8.5px;font-weight:600;letter-spacing:.06em;
   padding:2px 5px;border-radius:2px;color:#0a0e14;background:var(--muted)}
-.bdg.NOVO{background:var(--green);color:#fff}
+/* Badge text is translated, so both spellings need the colour. */
+.bdg.NOVO,.bdg.NEW{background:var(--green);color:#fff}
 .bdg.JACKPOT{background:var(--gold)}
-.bdg.UPORASTU{background:var(--accent);color:#fff}
+.bdg.UPORASTU,.bdg.RISING{background:var(--accent);color:#fff}
 .body{padding:9px 10px 10px;display:flex;flex-direction:column;gap:3px;flex:1}
 .tname{font-size:12.5px;font-weight:600;line-height:1.3;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -144,62 +145,62 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
 </head>
 <body>
 
-<div class="proto">PROTOTIP · Q'Makers · FEG Innovation Challenge 2026 · nije povezano s PSK-om · demo podaci</div>
+<div class="proto" data-i18n="proto">PROTOTYPE · Q'Makers · FEG Innovation Challenge 2026 · not affiliated with PSK · demo data</div>
 
 <div class="topnav"><div class="wrap"><nav class="topnav-in">
   <div class="logo">PSK<span>.</span></div>
-  <a href="#">Sport</a><a href="#">Uživo</a><a href="#" class="on">Casino</a>
-  <a href="#">Live Casino</a><a href="#">Loto</a><a href="#">Virtualne igre</a><a href="#">Promo</a>
+  <a href="#">Sport</a><a href="#" data-i18n="nav_live">Live</a><a href="#" class="on">Casino</a>
+  <a href="#">Live Casino</a><a href="#" data-i18n="nav_loto">Lotto</a><a href="#" data-i18n="nav_virtual">Virtual games</a><a href="#" data-i18n="nav_promo">Promo</a>
   <div class="who" id="who"></div>
 </nav></div></div>
 
 <div class="subnav"><div class="wrap"><div class="subnav-in">
   <button class="chip on">Lobby</button>
-  <button class="chip">Provideri</button>
-  <button class="chip">Jackpoti</button>
-  <button class="chip">Teme</button>
-  <button class="chip">Nove Igre</button>
-  <button class="chip">Popularno</button>
+  <button class="chip" data-i18n="c_prov">Providers</button>
+  <button class="chip" data-i18n="c_jack">Jackpots</button>
+  <button class="chip" data-i18n="c_theme">Themes</button>
+  <button class="chip" data-i18n="c_new">New games</button>
+  <button class="chip" data-i18n="c_pop">Popular</button>
   <button class="chip">Buy Bonus</button>
-  <button class="chip">Sve igre</button>
-  <label class="search">🔍<input placeholder="Pronađi svoju igru" aria-label="Pronađi svoju igru"></label>
+  <button class="chip" data-i18n="c_all">All games</button>
+  <label class="search">🔍<input placeholder="Find your game" id="searchbox" aria-label="Find your game"></label>
 </div></div></div>
 
 <div class="demo"><div class="wrap"><div class="demo-in">
-  <span class="lbl" id="profileLine">učitavanje…</span>
+  <span class="lbl" id="profileLine">loading…</span>
   <details class="ctl">
-    <summary>Demo kontrole zaštite igrača ▾</summary>
+    <summary data-i18n="rgctl">Demo player-protection controls ▾</summary>
     <div id="toggles" style="display:flex;flex-wrap:wrap;gap:8px"></div>
   </details>
 </div></div></div>
 
 <div class="wrap">
   <div id="status"></div>
-  <div id="rows"><div class="loading">Učitavanje lobija…</div></div>
+  <div id="rows"><div class="loading">Loading lobby…</div></div>
 
   <div class="note">
     <b>What you are looking at</b>
-    <p><strong>Popularno</strong> is the row psk.hr ships today (<em>Najigranije</em>). We kept it:
+    <p><strong id="n1">Popular</strong> is the row psk.hr ships today (<em>Najigranije</em>). We kept it:
     on next-game prediction, global popularity beat collaborative filtering outright —
     <code>0.2110</code> vs <code>0.0489</code> NDCG@10. Replacing it would have made the lobby worse.</p>
-    <p><strong>Nastavi igrati</strong>, <strong>Preporučeno za tebe</strong>,
-    <strong>Otkrij nešto novo</strong> and <strong>Jackpoti</strong> are personalised. Item-item
+    <p><strong id="n2">Continue playing</strong>, <strong id="n3">Picked for you</strong>,
+    <strong id="n4">Discover something new</strong> and <strong id="n5">Jackpots</strong> are personalised. Item-item
     collaborative filtering and a day-to-day sequence model propose ~200 candidates; a
     <strong>trained</strong> scikit-learn logistic regression re-ranks them. On the tail — outside
     the global top 50, where <code>76.5%</code> of discovery happens — it beats popularity
     <code>4.28×</code> on NDCG@10 while reaching <code>732</code> games instead of
     <code>29</code>.</p>
-    <p><strong>Nove igre</strong> uses 12 months of history to find titles genuinely first released in
+    <p><strong id="n6">New games</strong> uses 12 months of history to find titles genuinely first released in
     the last three months — not merely games with no data. Badges come from the same source:
-    <code>NOVO</code>, <code>JACKPOT</code>, <code>U PORASTU</code> (rising stake momentum).</p>
+    <code id="b1">NEW</code>, <code>JACKPOT</code>, <code id="b2">RISING</code> (rising stake momentum).</p>
     <p>Every tile's reason is the literal top contributor to its score. A dashed, dimmed tile is a game
     whose title is not in the data — shown only in your own history, never recommended.
     Full method in <code>docs/evaluation.md</code>.</p>
   </div>
 
   <footer>
-    Anonimizirani FEG uzorak · igrači su unaprijed hashirani identifikatori · nema osobnih podataka.
-    Preporuke nikada ne dolaze do samoisključenog računa: provjera se izvodi prije modela, a ne nakon njega.
+    Anonymised FEG sample · players are pre-hashed identifiers · no personal data.
+    Recommendations never reach a self-excluded account: the check runs before the model, not after it.
   </footer>
 </div>
 
@@ -207,12 +208,37 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
 (function(){
   "use strict";
   var $ = function(s){ return document.querySelector(s); };
+
+  // English is the markup; Croatian is applied over it. PSK is a Croatian
+  // brand and the product ships Croatian, but a reviewer who cannot read the
+  // row headings cannot judge whether the rows make sense - so ?lang=hr
+  // switches back, and proves the copy is a translation layer.
+  var LANG = (new URLSearchParams(location.search).get("lang") || "en")
+               .slice(0,2).toLowerCase();
+  if (LANG !== "hr") LANG = "en";
+  function T(en, hr){ return LANG === "hr" ? hr : en; }
+  if (LANG === "hr") {
+    document.documentElement.lang = "hr";
+    var HR = { rgctl:"Demo kontrole za\u0161tite igra\u010da \u25be",
+               proto:"PROTOTIP \u00b7 Q'Makers \u00b7 FEG Innovation Challenge 2026 \u00b7 nije povezano s PSK-om \u00b7 demo podaci",
+               nav_live:"U\u017eivo", nav_loto:"Loto", nav_virtual:"Virtualne igre", nav_promo:"Promo",
+               c_prov:"Provideri", c_theme:"Teme", c_new:"Nove Igre", c_all:"Sve igre",
+               c_jack:"Jackpoti", c_pop:"Popularno",
+               n1:"Popularno", n2:"Nastavi igrati", n3:"Preporu\u010deno za tebe",
+               n4:"Otkrij ne\u0161to novo", n5:"Jackpoti", n6:"Nove igre",
+               b1:"NOVO", b2:"U PORASTU" };
+    Object.keys(HR).forEach(function(k){
+      var n = document.getElementById(k) ||
+              document.querySelector('[data-i18n="'+k+'"]');
+      if (n) n.textContent = HR[k];
+    });
+  }
   function el(t,c,h){ var e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e; }
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
 
-  var FLAGS=[["self_excluded","Samoisključen"],["chasing_losses","Juri gubitke"],
-             ["stake_above_own_history","Ulog iznad prosjeka"]];
+  var FLAGS=[["self_excluded",T("Self-excluded","Samoisključen")],["chasing_losses",T("Chasing losses","Juri gubitke")],
+             ["stake_above_own_history",T("Stake above average","Ulog iznad prosjeka")]];
   // `player` comes from the signed-in session, never from a picker. The flags
   // below only ADD to whatever the account already carries server-side; they
   // cannot switch a gate off.
@@ -243,11 +269,11 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
   function renderStatus(rp,supp){
     var box=$("#status"); box.textContent="";
     var d=el("div","status "+(rp.state||"NORMAL").toLowerCase());
-    d.appendChild(el("b",null,"Zaštita igrača: "+esc(rp.state)));
+    d.appendChild(el("b",null,T("Player protection: ","Zaštita igrača: ")+esc(rp.state)));
     d.appendChild(el("span",null, rp.hard_gate
-      ? "Tvrda blokada. Za ovaj račun ne generira se nijedna preporuka."
+      ? T("Hard block. No recommendation is generated for this account.","Tvrda blokada. Za ovaj račun ne generira se nijedna preporuka.")
       : (supp&&supp.length ? "Suspendirani redovi: "+supp.join(", ")
-                           : "Nema pokazatelja štetne igre. Puni lobi.")));
+                           : T("No harmful-play indicators. Full lobby.","Nema pokazatelja štetne igre. Puni lobi."))));
     box.appendChild(d);
   }
 
@@ -256,19 +282,19 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
     var host=$("#rows"); host.textContent="";
     if(!data.rows||!data.rows.length){
       var e=el("div","panel");
-      e.appendChild(el("h3",null,"Nema preporuka za ovaj račun"));
-      e.appendChild(el("p",null,"Zaštita igrača: <strong>"+esc((data.responsible_play||{}).state)+
-        "</strong>. Ništa iz preporučitelja ne dolazi do blokiranog računa — nije filtrirano nakon "+
-        "bodovanja, nego uopće nije bodovano."));
+      e.appendChild(el("h3",null,T("No recommendations for this account","Nema preporuka za ovaj račun")));
+      e.appendChild(el("p",null,T("Player protection: <strong>","Zaštita igrača: <strong>")+esc((data.responsible_play||{}).state)+
+        T("</strong>. Nothing from the recommender reaches a blocked account — it is not filtered after ","</strong>. Ništa iz preporučitelja ne dolazi do blokiranog računa — nije filtrirano nakon ")+
+        T("scoring, it is never scored at all.","bodovanja, nego uopće nije bodovano.")));
       if((data.required_surfaces||[]).length){
         var ul=el("ul"); data.required_surfaces.forEach(function(s){ ul.appendChild(el("li",null,esc(s))); });
-        e.appendChild(el("p",null,"Umjesto toga moraju se prikazati:")); e.appendChild(ul);
+        e.appendChild(el("p",null,T("These must be shown instead:","Umjesto toga moraju se prikazati:"))); e.appendChild(ul);
       }
       host.appendChild(e); return;
     }
     if(data.cold_start){
       var c=el("div","panel");
-      c.appendChild(el("h3",null,"Novi igrač (cold start)"));
+      c.appendChild(el("h3",null,T("New player (cold start)","Novi igrač (cold start)")));
       c.appendChild(el("p",null,esc(data.cold_start)));
       host.appendChild(c);
     }
@@ -277,7 +303,7 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
       h.appendChild(el("h2",null,esc(r.title)));
       h.appendChild(el("span","sub",esc(r.subtitle)));
       h.appendChild(el("span","pers "+(r.personalised?"yes":"no"),
-        r.personalised?"personalizirano":"globalno"));
+        r.personalised?T("personalised","personalizirano"):T("global","globalno")));
       h.appendChild(el("span","src",esc(r.source)));
       sec.appendChild(h);
       var strip=el("div","strip");
@@ -294,11 +320,13 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
   }
   function load(){
     if(!state.player) return;
-    $("#rows").innerHTML='<div class="loading">Učitavanje lobija…</div>';
+    $("#rows").innerHTML='<div class="loading">'+T("Loading lobby…","Učitavanje lobija…")+'</div>';
     var q=query();
     // With no demo overrides, use /lobby so the account's own flags apply
     // server-side. With overrides, use /recommendations to layer them on.
-    var url = q ? ("/recommendations/"+encodeURIComponent(state.player)+"?"+q) : "/lobby";
+    var sep = q ? "&" : "?";
+    var url = (q ? ("/recommendations/"+encodeURIComponent(state.player)+"?"+q)
+                 : "/lobby") + sep + "lang=" + encodeURIComponent(LANG);
     fetch(url,{credentials:"same-origin"})
       .then(function(r){
         if(r.status===401){ window.location.href="/"; throw new Error("signed out"); }
@@ -306,7 +334,7 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
       }).then(render)
       .catch(function(e){
         if(e.message==="signed out") return;
-        $("#rows").innerHTML='<div class="panel"><h3>Greška</h3><p>'+esc(e.message)+'</p></div>';
+        $("#rows").innerHTML='<div class="panel"><h3>'+T("Error","Greška")+'</h3><p>'+esc(e.message)+'</p></div>';
       });
   }
 
@@ -330,7 +358,7 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
     var av=el("div","av",esc((u.display_name||"?").trim()[0].toUpperCase()));
     var nm=el("div","nm", esc(u.display_name)+
       '<span class="sm">'+esc(u.username)+"</span>");
-    var out=el("button",null,"Odjava");
+    var out=el("button",null,T("Sign out","Odjava"));
     out.addEventListener("click",function(){
       fetch("/logout",{method:"POST",credentials:"same-origin"})
         .then(function(){ window.location.href="/"; });
@@ -339,9 +367,10 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
 
     var p=u.profile||{};
     $("#profileLine").textContent =
-      p.games_played+" igara u povijesti · "+p.named_games+" s poznatim nazivom"+
-      (p.also_bets_sport?(" · klada "+p.also_bets_sport):"")+
-      (p.top_game?(" · najviše: "+p.top_game):"");
+      p.games_played+" "+T("games in history","igara u povijesti")+" · "+
+      p.named_games+" "+T("with a known title","s poznatim nazivom")+
+      (p.also_bets_sport?(" · "+T("bets","klada")+" "+p.also_bets_sport):"")+
+      (p.top_game?(" · "+T("top","najviše")+": "+p.top_game):"");
 
     if(u.note){
       var n=el("div","rgnote"+(u.rg_state==="BLOCKED"?" blocked":""),
@@ -359,7 +388,7 @@ footer{padding:24px 0 46px;color:var(--muted);font-size:11.5px;max-width:90ch}
     })
     .catch(function(){
       $("#rows").innerHTML='<div class="panel"><h3>API nije dostupan</h3><p>Pokreni '+
-        '<code>python -m src.cli demo</code> i osvježi stranicu.</p></div>';
+        '<code>python -m src.cli demo</code> '+T("and refresh the page.","i osvježi stranicu.")+'</p></div>';
     });
 })();
 </script>

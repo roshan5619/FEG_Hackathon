@@ -155,7 +155,7 @@ def test_logout_ends_the_session(client):
 def test_root_serves_the_landing_page_when_signed_out(client):
     r = client.get("/")
     assert r.status_code == 200
-    assert b"Ovo je lobi koji vide svi" in r.content
+    assert b"This is the lobby everyone sees" in r.content
 
 
 def test_fresh_clears_a_live_session(client):
@@ -169,13 +169,29 @@ def test_fresh_clears_a_live_session(client):
     assert client.get("/lobby").status_code == 200
 
     r = client.get("/?fresh=1")
-    assert b"Ovo je lobi koji vide svi" in r.content, "must land signed out"
+    assert b"This is the lobby everyone sees" in r.content, "must land signed out"
     assert client.get("/me").json()["authenticated"] is False
     assert client.get("/lobby").status_code == 401
 
     # and signing back in still works, so the reset is not destructive
     client.post("/login", json={"username": normal["username"], "password": PW})
     assert client.get("/lobby").status_code == 200
+
+
+def test_language_switch_translates_the_rows(client):
+    """
+    The product ships Croatian; English exists so a reviewer who does not read
+    Croatian can still judge whether the rows make sense. Both must work, and
+    an unknown code must fall back rather than error.
+    """
+    normal = _account("NORMAL")
+    client.post("/login", json={"username": normal["username"], "password": PW})
+    en = [r["title"] for r in client.get("/lobby?lang=en").json()["rows"]]
+    hr = [r["title"] for r in client.get("/lobby?lang=hr").json()["rows"]]
+    assert "Continue playing" in en and "Nastavi igrati" in hr
+    assert en != hr and len(en) == len(hr)
+    # unknown language falls back to the default, it does not 500
+    assert [r["title"] for r in client.get("/lobby?lang=zz").json()["rows"]] == en
 
 
 def test_anonymous_lobby_has_no_personalised_rows(client):

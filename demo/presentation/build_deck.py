@@ -399,7 +399,7 @@ def build(team_lead=TEAM_LEAD, members=TEAM_MEMBERS):
     stat(s, M, Inches(5.0), Inches(4.15),
          "%d of %s" % (F["cov_pop_disc"], GAMES),
          "games the top row can ever reach — about 1% of the library",
-         color=RED, bigsize=26, h=Inches(1.2))
+         color=RED, bigsize=26, h=Inches(1.45))
     picture(s, "01-anonymous-lobby.png", M + Inches(4.55), Inches(1.0),
             Inches(8.0))
     footer(s, "01 / 11")
@@ -411,7 +411,7 @@ def build(team_lead=TEAM_LEAD, members=TEAM_MEMBERS):
         "Sign in.\nSame page.", size=32, bold=True, color=INK, spacing=1.06)
     txt(s, M, Inches(2.4), Inches(4.15), Inches(2.3),
         "Two rows become six, built from that player's own history by the "
-        "trained ranker.\n\nNothing was removed. Popularno is still there, "
+        "trained ranker.\n\nNothing was removed. Popular is still there, "
         "unchanged — and that turns out to matter.",
         size=13.5, color=INK2, spacing=1.25)
     rect(s, M, Inches(4.95), Inches(4.15), Inches(1.4), fill=PANEL,
@@ -511,7 +511,7 @@ def build(team_lead=TEAM_LEAD, members=TEAM_MEMBERS):
     txt(s, M + Inches(0.26), y + Inches(2.56), CW - Inches(0.52), Inches(0.5),
         [[("So we kept the popularity row. ", {"bold": True, "color": INK}),
           ("Replacing it would have made the lobby worse — which is why "
-           "Popularno is still on the screen you just saw.", {})]],
+           "Popular is still on the screen you just saw.", {})]],
         size=14, color=INK2)
     footer(s, "04 / 11")
 
