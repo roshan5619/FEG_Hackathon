@@ -361,7 +361,7 @@ training interactions.
 | [`docs/compliance-note.md`](docs/compliance-note.md) | EU AI Act, Croatian binding rules, GDPR — mapped to code and tests |
 | [`docs/dependencies.md`](docs/dependencies.md) | Third-party components, licences, data provenance |
 | [`docs/ai-use-disclosure.md`](docs/ai-use-disclosure.md) | AI assistance disclosure — what the team originated and where AI assisted |
-| [`demo/presentation/`](demo/presentation/) | The pitch deck (`.pptx`) and the script that builds it from `artifacts/` |
+| [`demo/presentation/`](demo/presentation/) | The pitch deck (`.pptx`), the story to tell with it, and the script that builds it from `artifacts/` |
 | [`demo/live-demo.md`](demo/live-demo.md) | Live-demo runbook: pre-flight, run of show, failure recovery, expected questions |
 
 ---

@@ -272,432 +272,515 @@ def facts():
     return f
 
 
-# ----------------------------------------------------------------- slides
 #: Shown on the title slide. Override from the command line if they change:
-#:     python demo/presentation/build_deck.py "Lead Name" "A, B"
+#:     python demo/presentation/build_deck.py "Lead Name" "A · B"
 TEAM_LEAD = "Bandlapalli Roshan Babu"
 TEAM_MEMBERS = "C. Kavya Sri · M. Yashwanth"
 
+# ------------------------------------------------------------- new helpers
+SHOTS = os.path.join(REPO, "demo", "screenshots")
 
+
+def shot_path(name):
+    p = os.path.join(SHOTS, name)
+    if not os.path.exists(p):
+        raise SystemExit(
+            "Missing screenshot %s.\nRun:  python demo/capture_screenshots.py"
+            % name)
+    return p
+
+
+def picture(slide, name, x, y, w, crop=None, border=True):
+    """Place a screenshot, optionally cropped as (left, top, right, bottom)."""
+    pic = slide.shapes.add_picture(shot_path(name), x, y, width=w)
+    if crop:
+        pic.crop_left, pic.crop_top, pic.crop_right, pic.crop_bottom = crop
+        pic.width = w
+        vis_w = 1424.0 * (1 - crop[0] - crop[2])
+        vis_h = 855.0 * (1 - crop[1] - crop[3])
+        pic.height = Emu(int(w * vis_h / vis_w))
+    if border:
+        pic.line.color.rgb = LINE
+        pic.line.width = Pt(1)
+    return pic
+
+
+def hbars(slide, x, y, w, rows, hi=0, rowh=Inches(0.46), fmt="%.4f"):
+    """
+    Horizontal bars drawn as rectangles. A native pptx chart drags in its own
+    theme colours and fonts; this stays on the deck's palette.
+    """
+    top = max(v for _, v in rows)
+    labw, valw = Inches(2.15), Inches(0.95)
+    barw = w - labw - valw
+    for i, (label, val) in enumerate(rows):
+        yy = y + rowh * i
+        on = (i == hi)
+        txt(slide, x, yy + Inches(0.05), labw - Inches(0.12), Inches(0.3),
+            label, size=12.5, bold=on, color=INK if on else INK2)
+        bw = max(Inches(0.02), Emu(int(barw * val / top)))
+        rect(slide, x + labw, yy + Inches(0.07), bw, Inches(0.22),
+             fill=GREEN if on else RGBColor(0xC3, 0xCE, 0xDC))
+        txt(slide, x + labw + bw + Inches(0.1), yy + Inches(0.04),
+            valw, Inches(0.3), fmt % val, size=12,
+            bold=on, color=GREEN if on else MUTED, font=MONO)
+    return y + rowh * len(rows)
+
+
+def flow(slide, y, boxes, h=Inches(1.0), gap=Inches(0.30)):
+    """A left-to-right pipeline: boxes with arrows between them."""
+    from pptx.enum.shapes import MSO_SHAPE
+    n = len(boxes)
+    bw = (CW - gap * (n - 1)) / n
+    for i, (head, body, accent) in enumerate(boxes):
+        x = M + (bw + gap) * i
+        rect(slide, x, y, bw, h, fill=PANEL if not accent else None,
+             line=accent or LINE, lw=1.6 if accent else 1.0)
+        if accent:
+            rect(slide, x, y, bw, Inches(0.05), fill=accent)
+        txt(slide, x + Inches(0.16), y + Inches(0.17), bw - Inches(0.32),
+            Inches(0.3), head, size=12, bold=True, color=accent or INK)
+        txt(slide, x + Inches(0.16), y + Inches(0.5), bw - Inches(0.32),
+            h - Inches(0.6), body, size=10.5, color=INK2, spacing=1.12)
+        if i < n - 1:
+            a = slide.shapes.add_shape(
+                MSO_SHAPE.RIGHT_ARROW, x + bw + Inches(0.05),
+                y + h / 2 - Inches(0.07), gap - Inches(0.10), Inches(0.14))
+            a.fill.solid()
+            a.fill.fore_color.rgb = RGBColor(0xB9, 0xC5, 0xD4)
+            a.line.fill.background()
+            a.shadow.inherit = False
+    return y + h
+
+
+# ----------------------------------------------------------------- slides
 def build(team_lead=TEAM_LEAD, members=TEAM_MEMBERS):
     F = facts()
     prs = deck()
+    PLAYERS = format(F["players"], ",")
+    GAMES = format(F["games"], ",")
 
-    # 1 --------------------------------------------------------- title
+    # 1 ------------------------------------------------------------ title
     s = blank(prs)
     rect(s, Inches(0), Inches(0), W, Inches(0.13), fill=ACCENT)
-    txt(s, M, Inches(1.75), CW, Inches(1.1),
+    txt(s, M, Inches(1.55), CW, Inches(1.1),
         "PSK Personalised Lobby", size=52, bold=True, color=INK)
-    txt(s, M, Inches(2.95), Inches(8.4), Inches(0.9),
-        "The lobby should know who is looking at it.",
-        size=21, color=ACCENT)
-    txt(s, M, Inches(3.85), Inches(9.2), Inches(1.0),
+    txt(s, M, Inches(2.75), Inches(9.0), Inches(0.9),
+        "The lobby should know who is looking at it.", size=22, color=ACCENT)
+    txt(s, M, Inches(3.62), Inches(9.4), Inches(1.0),
         "A game recommender that rebuilds the casino lobby around what each "
-        "player actually plays — their history, their favourites, their next game.",
-        size=14.5, color=INK2)
-
-    rect(s, M, Inches(5.05), CW, Emu(12700), fill=LINE)
-    bits = [("%s players" % format(F["players"], ",")),
-            ("%s games" % format(F["games"], ",")),
-            ("%s rows" % format(F["rows"], ",")),
-            "a trained ranker"]
+        "player actually plays.", size=15, color=INK2)
+    rect(s, M, Inches(4.75), CW, Emu(12700), fill=LINE)
+    bits = ["%s players" % PLAYERS, "%s games" % GAMES,
+            "%s rows" % format(F["rows"], ","), "a trained ranker"]
     for i, b in enumerate(bits):
-        txt(s, M + Inches(3.05) * i, Inches(5.3), Inches(2.9), Inches(0.4),
+        txt(s, M + Inches(3.05) * i, Inches(5.0), Inches(2.9), Inches(0.4),
             [[(b, {"font": MONO, "size": 11.5, "color": INK2})]])
-
     who = "Team Q'Makers"
     if team_lead:
         who += "  ·  " + team_lead
     if members:
         who += "  ·  " + members
-    txt(s, M, Inches(6.35), CW, Inches(0.7),
+    txt(s, M, Inches(6.2), CW, Inches(0.7),
         [who, "FEG Innovation Challenge 2026  ·  Croatian brand (PSK) track"],
         size=13, color=MUTED)
 
-    # 2 ------------------------------------------------------- problem
+    # 2 --------------------------------------------- the lobby today (shot)
     s = blank(prs)
-    eyebrow(s, "01  /  THE PROBLEM")
-    y = title(s, "One lobby. %s players." % format(F["players"], ","),
-              "psk.hr's casino lobby is static. The biggest row is Najigranije — "
-              "“most played” — and it is identical for every single player, "
-              "whether they have played one game or three hundred.")
-    gap = Inches(0.28)
-    w3 = (CW - gap * 2) / 3
-    stat(s, M, y + Inches(0.25), w3, "3,580",
-         "launches from SEARCH — the single most common route to a game, ahead "
-         "of every browsable surface. If you have to type the name, the lobby "
-         "didn't surface it.", color=RED, h=Inches(1.85))
-    stat(s, M + w3 + gap, y + Inches(0.25), w3, "%d–%d" % (F["cov_pop_tail"], F["cov_pop_disc"]),
-         "games the top row can ever reach, of %s. About 1%% of the library — "
-         "the same 1%% for everyone." % format(F["games"], ","),
-         color=RED, h=Inches(1.85))
-    stat(s, M + (w3 + gap) * 2, y + Inches(0.25), w3, "0",
-         "personalised rows today. The widgets exist — top_10, providers, "
-         "categories — but not one of them adapts to the player.",
-         color=RED, h=Inches(1.85))
-    txt(s, M, y + Inches(2.45), CW, Inches(0.8),
-        [[("A seventh of all stake ", {"bold": True}),
-          ("— €19.6M, 13.7% — sits on games a player was trying for the "
-           "first time. That entire flow is served today by a search box and one "
-           "row that never changes.", {})]],
-        size=15, color=INK)
-    footer(s, "01 / 12")
+    eyebrow(s, "01  /  TODAY")
+    txt(s, M, Inches(0.72), Inches(4.15), Inches(1.6),
+        "One lobby.\n%s players." % PLAYERS, size=32, bold=True, color=INK,
+        spacing=1.06)
+    txt(s, M, Inches(2.4), Inches(4.15), Inches(2.2),
+        "Two rows. Identical for everyone — whether they have played one "
+        "game or three hundred.\n\nThe most common route to a game here is "
+        "typing its name into search. If you have to search, the lobby "
+        "didn't surface it.", size=13.5, color=INK2, spacing=1.25)
+    stat(s, M, Inches(5.0), Inches(4.15),
+         "%d of %s" % (F["cov_pop_disc"], GAMES),
+         "games the top row can ever reach — about 1% of the library",
+         color=RED, bigsize=26, h=Inches(1.2))
+    picture(s, "01-anonymous-lobby.png", M + Inches(4.55), Inches(1.0),
+            Inches(8.0))
+    footer(s, "01 / 11")
 
-    # 3 ------------------------------------------------------- insight
+    # 3 ----------------------------------------- the same page, signed in
     s = blank(prs)
-    eyebrow(s, "02  /  THE INSIGHT")
-    y = title(s, "Players already explore. They just explore badly.", rule=True)
-    txt(s, M, y + Inches(0.1), Inches(3.5), Inches(1.5),
-        "74%", size=88, bold=True, color=ACCENT)
-    txt(s, M, y + Inches(1.5), Inches(4.3), Inches(1.2),
-        [[("of plays in a held-out week were games the player had ", {}),
-          ("never played before.", {"bold": True, "color": INK})]],
-        size=15, color=INK2)
+    eyebrow(s, "02  /  THE PRODUCT", GREEN)
+    txt(s, M, Inches(0.72), Inches(4.15), Inches(1.6),
+        "Sign in.\nSame page.", size=32, bold=True, color=INK, spacing=1.06)
+    txt(s, M, Inches(2.4), Inches(4.15), Inches(2.3),
+        "Two rows become six, built from that player's own history by the "
+        "trained ranker.\n\nNothing was removed. Popularno is still there, "
+        "unchanged — and that turns out to matter.",
+        size=13.5, color=INK2, spacing=1.25)
+    rect(s, M, Inches(4.95), Inches(4.15), Inches(1.4), fill=PANEL,
+         line=GREEN, lw=1.4)
+    txt(s, M + Inches(0.22), Inches(5.14), Inches(3.7), Inches(1.1),
+        [[("Every tile says why. ", {"bold": True, "color": INK}),
+          ("The reason is the model's own largest term — not a generated "
+           "sentence.", {})]],
+        size=12.5, color=INK2, spacing=1.2)
+    picture(s, "02-signed-in-lobby.png", M + Inches(4.55), Inches(1.0),
+            Inches(8.0))
+    footer(s, "02 / 11")
 
-    xr = M + Inches(4.9)
-    wr = CW - Inches(4.9)
-    txt(s, xr, y + Inches(0.12), wr, Inches(1.0),
-        "This is not an audience that needs persuading to try something new. "
-        "They try new games constantly — through a search box and one global "
-        "row. The demand for discovery is already there. The lobby simply "
-        "doesn't serve it.", size=15, color=INK)
-    rect(s, xr, y + Inches(1.35), wr, Inches(1.55), fill=PANEL, line=LINE)
-    txt(s, xr + Inches(0.28), y + Inches(1.55), wr - Inches(0.56), Inches(1.2),
-        [[("And they have clear favourites. ", {"bold": True, "color": INK}),
-          ("A median 78% of a player's launches sit in their top-3 games, and "
-           "65% come from a single provider.", {})]],
-        size=13.5, color=INK2)
-    txt(s, xr, y + Inches(3.05), wr, Inches(0.8),
-        [[("So the lobby has two jobs, not one: ", {"bold": True, "color": INK}),
-          ("get them back to what they love, and show them what's next. We "
-           "built and measured both separately.", {})]],
-        size=14, color=INK2)
-    footer(s, "02 / 12")
-
-    # 4 ----------------------------------------------------- what we built
+    # 4 ---------------------------------------------- the reason, close up
     s = blank(prs)
-    eyebrow(s, "03  /  THE PRODUCT")
-    y = title(s, "Sign in, and the lobby becomes yours.",
-              "One gesture. Signed out you get what every psk.hr visitor gets "
-              "today; signed in, the same page rebuilds from that player's own "
-              "history.")
-    half = (CW - Inches(0.34)) / 2
-    rect(s, M, y + Inches(0.2), half, Inches(1.15), fill=PANEL, line=LINE)
-    txt(s, M + Inches(0.26), y + Inches(0.38), half - Inches(0.5), Inches(0.9),
-        [[("SIGNED OUT", {"font": MONO, "size": 11, "bold": True, "color": RED})],
-         [("2 rows — Popularno, Nove igre. Identical for all %s players."
-           % format(F["players"], ","), {"size": 13, "color": INK2})]])
-    rect(s, M + half + Inches(0.34), y + Inches(0.2), half, Inches(1.15),
-         fill=PANEL, line=LINE)
-    txt(s, M + half + Inches(0.6), y + Inches(0.38), half - Inches(0.5), Inches(0.9),
-        [[("SIGNED IN", {"font": MONO, "size": 11, "bold": True, "color": GREEN})],
-         [("6 rows, built from that player's history by the trained ranker.",
-           {"size": 13, "color": INK2})]])
+    eyebrow(s, "03  /  EXPLAINABILITY")
+    y = title(s, "Every tile carries the reason it is there.",
+              "Not a generated rationale — the single feature with the "
+              "largest weight × value in the model's own score. A test "
+              "proves the attribution reconstructs the probability exactly, "
+              "so /explain can be trusted in an audit.")
+    picture(s, "03-why-this-game.png", M, y + Inches(0.12), Inches(6.75),
+            crop=(0.0, 0.30, 0.36, 0.10))
+    xr = M + Inches(7.10)
+    wr = CW - Inches(7.10)
+    bullets(s, xr, y + Inches(0.18), wr, [
+        [[("EU AI Act 2024/1689. ", {"bold": True, "color": INK}),
+          ("Explainability met by construction, not by a report written "
+           "afterwards.", {})]],
+        [[("Dimmed, dashed tiles ", {"bold": True, "color": INK}),
+          ("are games whose title is not in the data. They appear only in "
+           "your own history — never as a recommendation.", {})]],
+        [[("No stake suggestion exists ", {"bold": True, "color": INK}),
+          ("anywhere in the codebase. The system recommends games, never "
+           "amounts.", {})]],
+        [[("No dark patterns. ", {"bold": True, "color": INK}),
+          ("No countdowns, no scarcity, no “others are playing”, no "
+           "near-miss framing.", {})]],
+    ], size=12.5)
+    footer(s, "03 / 11")
 
-    table(s, M, y + Inches(1.62), CW, [
-        ["Row", "What it is"],
-        ["Nastavi igrati", "Their own games, recency-weighted. Serves 100% of players"],
-        ["Preporučeno za tebe",
-         "“Jer igraš 4 Scarab Coins: Hold and Win” — the trained ranker"],
-        ["Otkrij nešto novo", "The tail: same model, blockbusters removed"],
-        ["Jackpoti", "%d jackpot-eligible titles, ordered by the same model" % F["jackpot"]],
-        ["Popularno", "The row PSK ships today — kept unchanged, and that is the point"],
-        ["Nove igre", "%d genuinely new titles, from real release age" % F["new_games"]],
-    ], [0.26, 0.74], rowh=Inches(0.36))
-    footer(s, "03 / 12")
-
-    # 5 ----------------------------------------------------------- demo
+    # 5 ------------------------------------------------------------- demo
     s = blank(prs)
     rect(s, Inches(0), Inches(0), W, H, fill=DARK)
     rect(s, Inches(0), Inches(0), W, Inches(0.13), fill=ACCENT)
-    txt(s, M, Inches(1.5), CW, Inches(0.5),
+    txt(s, M, Inches(1.45), CW, Inches(0.5),
         [[("LIVE  DEMO", {"font": MONO, "size": 13, "bold": True,
                           "color": RGBColor(0x6F, 0xA8, 0xE8)})]])
-    txt(s, M, Inches(2.0), Inches(9.5), Inches(1.4),
+    txt(s, M, Inches(1.95), Inches(9.5), Inches(1.4),
         "Watch two rows become six.", size=44, bold=True, color=WHITE)
     beats = [
-        "The anonymous lobby — what all %s players see today"
-        % format(F["players"], ","),
+        "The anonymous lobby — what all %s players see today" % PLAYERS,
         "Sign in as ana.k — the same page rebuilds into six rows",
-        "Read a tile: “Jer igraš …” is the literal top contributor "
-        "to that score, not a generated sentence",
-        "davor.z — sign-in REFUSED. Age unverified; the check must precede play",
+        "Read a tile out loud — that is the model's own top feature",
+        "davor.z — sign-in REFUSED. Age unverified; the check precedes play",
         "lucija.h — signs in, zero rows. Self-exclusion blocks inducements, "
         "not account access",
     ]
     for i, b in enumerate(beats):
-        yy = Inches(3.55) + Inches(0.46) * i
+        yy = Inches(3.45) + Inches(0.47) * i
         txt(s, M, yy, Inches(0.4), Inches(0.4),
             [[("0%d" % (i + 1), {"font": MONO, "size": 12, "bold": True,
                                  "color": RGBColor(0x6F, 0xA8, 0xE8)})]])
         txt(s, M + Inches(0.55), yy, CW - Inches(0.6), Inches(0.45), b,
             size=14, color=RGBColor(0xC9, 0xD3, 0xE0))
-    txt(s, M, H - Inches(0.85), CW, Inches(0.4),
+    txt(s, M, H - Inches(0.8), CW, Inches(0.4),
         "12 demo accounts, generated from real player histories in the model. "
-        "The change you are watching is the ranker running on that player's data — not a mock-up.",
+        "~25 ms per lobby, and no network on the request path.",
         size=12, color=RGBColor(0x82, 0x8F, 0xA0))
 
-    # 6 ------------------------------------------------- the honest loss
+    # 6 --------------------------------------------------- the honest loss
     s = blank(prs)
     eyebrow(s, "04  /  THE FINDING WE DIDN'T WANT", RED)
     y = title(s, "Our recommender lost.",
               "On predicting the next game a player tries, collaborative "
-              "filtering was beaten outright by the global popularity row PSK "
+              "filtering was beaten outright by the popularity row PSK "
               "already ships.")
-    tw = Inches(5.5)
-    table(s, M, y + Inches(0.22), tw, [
-        ["Model", ("NDCG@10", {"align": PP_ALIGN.RIGHT})],
-        [("most_played", {"font": MONO, "bold": True}),
-         ("%.3f" % F["disc_pop"], {"align": PP_ALIGN.RIGHT, "bold": True, "color": GREEN})],
-        [("provider_popular", {"font": MONO}),
-         ("%.3f" % F["prov_disc"], {"align": PP_ALIGN.RIGHT})],
-        [("item-item CF  (ours)", {"font": MONO}),
-         ("%.3f" % F["cf_disc"], {"align": PP_ALIGN.RIGHT, "color": RED})],
-    ], [0.62, 0.38], rowh=Inches(0.42))
-    txt(s, M, y + Inches(2.05), tw, Inches(0.7),
-        "Discovery task, 9,102 players. We tuned hard before accepting it — "
-        "popularity correction, shrinkage, neighbourhood size, and a "
-        "popularity-blended hybrid across eight weights. Nothing beat plain popularity.",
-        size=12.5, color=MUTED)
-
-    xr = M + tw + Inches(0.5)
-    wr = CW - tw - Inches(0.5)
-    txt(s, xr, y + Inches(0.22), wr, Inches(0.5),
-        "Why — and it is a real fact about PSK", size=15, bold=True, color=INK)
-    txt(s, xr, y + Inches(0.75), wr, Inches(1.4),
+    hbars(s, M, y + Inches(0.22), Inches(6.3), [
+        ("most_played", F["disc_pop"]),
+        ("provider_popular", F["prov_disc"]),
+        ("item-item CF (ours)", F["cf_disc"]),
+    ], hi=0)
+    txt(s, M, y + Inches(1.68), Inches(6.3), Inches(0.4),
+        "NDCG@10  ·  discovery task  ·  9,102 players",
+        size=10.5, color=MUTED, font=MONO)
+    xr = M + Inches(6.8)
+    wr = CW - Inches(6.8)
+    txt(s, xr, y + Inches(0.16), wr, Inches(2.0),
         "What players try next is overwhelmingly what is already popular. "
-        "Spearman correlation between a game's popularity and its next-week "
-        "discovery count is 0.79. One title — Goal Goal Goal: Cash Collect — "
-        "takes 13% of all discovery plays on its own.", size=13.5, color=INK2)
-    rect(s, xr, y + Inches(2.3), wr, Inches(0.95), fill=PANEL, line=ACCENT, lw=1.4)
-    txt(s, xr + Inches(0.24), y + Inches(2.5), wr - Inches(0.48), Inches(0.6),
+        "Correlation between a game's popularity and its next-week discovery "
+        "count is 0.79, and one title takes 13% of all discovery plays on its "
+        "own.\n\nWe swept popularity correction, shrinkage, neighbourhood size "
+        "and eight blend weights before accepting it.",
+        size=13, color=INK2, spacing=1.25)
+    rect(s, M, y + Inches(2.35), CW, Inches(0.85), fill=PANEL, line=ACCENT,
+         lw=1.4)
+    txt(s, M + Inches(0.26), y + Inches(2.56), CW - Inches(0.52), Inches(0.5),
         [[("So we kept the popularity row. ", {"bold": True, "color": INK}),
-          ("Replacing it would have made the lobby worse.", {})]],
+          ("Replacing it would have made the lobby worse — which is why "
+           "Popularno is still on the screen you just saw.", {})]],
         size=14, color=INK2)
-    footer(s, "04 / 12")
+    footer(s, "04 / 11")
 
-    # 7 --------------------------------------------------- the tail result
+    # 7 ----------------------------------------------------- the tail win
     s = blank(prs)
     eyebrow(s, "05  /  THE RESULT THAT JUSTIFIES THE BUILD", GREEN)
     y = title(s, "But popularity only knows %d games." % F["cov_pop_tail"],
-              "Remove the global top-50 — the blockbusters everyone already "
-              "sees — and the result reverses completely.")
-    tw = Inches(5.5)
-    table(s, M, y + Inches(0.18), tw, [
-        ["Model", ("NDCG@10", {"align": PP_ALIGN.RIGHT})],
-        [("Trained ranker", {"bold": True}),
-         ("%.4f" % F["ranker_ndcg"], {"align": PP_ALIGN.RIGHT, "bold": True, "color": GREEN})],
-        [("Blend (sequence + CF)", {}), ("%.4f" % F["blend"], {"align": PP_ALIGN.RIGHT})],
-        [("Sequence", {}), ("%.4f" % F["seq"], {"align": PP_ALIGN.RIGHT})],
-        [("Item-item CF", {}), ("%.4f" % F["cf"], {"align": PP_ALIGN.RIGHT})],
-        [("most_played", {"font": MONO}),
-         ("%.4f" % F["pop_ndcg_tail"], {"align": PP_ALIGN.RIGHT, "color": RED})],
-    ], [0.62, 0.38], rowh=Inches(0.355))
+              "Remove the global top-50 and it reverses. This is the tail "
+              "— where 76.5% of all discovery already happens.")
+    hbars(s, M, y + Inches(0.22), Inches(6.3), [
+        ("Trained ranker", F["ranker_ndcg"]),
+        ("Blend (seq + CF)", F["blend"]),
+        ("Sequence", F["seq"]),
+        ("Item-item CF", F["cf"]),
+        ("most_played", F["pop_ndcg_tail"]),
+    ], hi=0)
+    txt(s, M, y + Inches(2.55), Inches(6.3), Inches(0.4),
+        "NDCG@10  ·  tail discovery  ·  5,921 players",
+        size=10.5, color=MUTED, font=MONO)
+    xr = M + Inches(6.8)
+    wr = CW - Inches(6.8)
+    sw = (wr - Inches(0.22)) / 2
+    stat(s, xr, y + Inches(0.16), sw, "%.2f×" % F["ratio"],
+         "better than the row that ships today", color=GREEN, bigsize=33,
+         h=Inches(1.25))
+    stat(s, xr + sw + Inches(0.22), y + Inches(0.16), sw,
+         "%.0f×" % F["cov_mult"],
+         "the catalogue — %d games, not %d"
+         % (F["cov_ranker"], F["cov_pop_tail"]),
+         color=GREEN, bigsize=33, h=Inches(1.25))
+    txt(s, xr, y + Inches(1.6), wr, Inches(1.7),
+        "Popularity owns the head. We own the tail.\n\nThe recommender is "
+        "additive — nothing that already worked was removed, so the "
+        "downside is bounded at screen space, and every row ships behind its "
+        "own feature flag.", size=13, color=INK2, spacing=1.25)
+    footer(s, "05 / 11")
 
-    xr = M + tw + Inches(0.5)
-    wr = CW - tw - Inches(0.5)
-    sw = (wr - Inches(0.24)) / 2
-    stat(s, xr, y + Inches(0.18), sw, "%.2f×" % F["ratio"],
-         "accuracy on the tail vs the popularity baseline", color=GREEN, bigsize=36)
-    stat(s, xr + sw + Inches(0.24), y + Inches(0.18), sw, "%.0f×" % F["cov_mult"],
-         "the catalogue reached — %d games instead of %d"
-         % (F["cov_ranker"], F["cov_pop_tail"]), color=GREEN, bigsize=36)
-    stat(s, xr, y + Inches(1.78), wr, "76.5%",
-         "of all discovery plays live in that tail. This is not a niche we "
-         "invented — it is where most exploration already happens.",
-         color=ACCENT, bigsize=36)
-
-    txt(s, M, y + Inches(2.55), tw, Inches(0.9),
-        "Logistic regression over 14 features, ~200,000 labelled rows. "
-        "Hyperparameters chosen on a separate validation week — never the "
-        "test week. Ordering holds at the top-20 and top-100 boundaries too, "
-        "so it is not an artefact of where we drew the line.",
-        size=12, color=MUTED)
-    footer(s, "05 / 12")
-
-    # 8 ------------------------------------------------------ the design
+    # 8 ----------------------------------------------------- how it works
     s = blank(prs)
-    eyebrow(s, "06  /  THE DESIGN THAT FOLLOWS")
-    y = title(s, "Popularity owns the head. We own the tail.",
-              "The recommender is additive. Nothing that already worked was "
-              "removed, so the downside is bounded at screen space — and every "
-              "row ships behind its own feature flag.")
-    table(s, M, y + Inches(0.2), CW, [
-        ["Row", "Source", "Why it earns its place"],
-        [("Popularno", {"bold": True}), "popularity",
-         "The incumbent row (Najigranije), unchanged — because it wins its job"],
-        [("Nastavi igrati", {"bold": True}), "recency-weighted history",
-         "Their own games, most recent first. NDCG 0.73 — and we label it the easy task it is"],
-        [("Preporučeno za tebe", {"bold": True}), "trained ranker",
-         "“Because you played X” — the literal top contributor to the score"],
-        [("Otkrij nešto novo", {"bold": True}), "ranker, top-50 removed",
-         "Where the %.2f× lives" % F["ratio"]],
-        [("Jackpoti", {"bold": True}), "ranker + eligibility",
-         "%d jackpot titles, ordered by the model rather than by prize size" % F["jackpot"]],
-        [("Nove igre", {"bold": True}), "cold items",
-         "12.1% of discovery is on games with zero history — no CF can ever reach them"],
-    ], [0.21, 0.22, 0.57], rowh=Inches(0.44))
-    footer(s, "06 / 12")
+    eyebrow(s, "06  /  HOW IT WORKS")
+    y = title(s, "Two stages: propose, then re-rank.",
+              "Cheap models generate candidates; a trained model orders them. "
+              "The second stage is what beats the blend — and it is also "
+              "what makes every tile explainable.")
+    flow(s, y + Inches(0.12), [
+        ("Item-item CF",
+         "Cosine over %s × %s, shrinkage, and a popularity correction "
+         "applied to the similarity" % (PLAYERS, GAMES), None),
+        ("Day-to-day sequence",
+         "Row-normalised transitions over 1.4M ordered pairs, with "
+         "recency-decayed profiles", None),
+        ("~200 candidates",
+         "The union per player, with everything already played removed",
+         None),
+        ("Trained re-ranker",
+         "LogisticRegression · 14 features · ~200k labelled rows",
+         GREEN),
+        ("Score → reason",
+         "Each score decomposes into weight × value; the largest term is "
+         "the sentence on the tile", ACCENT),
+    ], h=Inches(1.5))
+    bullets(s, M, y + Inches(1.95), CW, [
+        [[("The features. ", {"bold": True, "color": INK}),
+          ("CF score, sequence score, popularity, provider affinity and "
+           "recency, type affinity, stake momentum, release age, is-new, "
+           "jackpot, payout ratio, and three player-level terms. Payout ratio "
+           "is a similarity feature only — never ranked on, never shown, "
+           "because advertising “this game pays more” is the "
+           "inducement the AI Act prohibits.", {})]],
+        [[("The name bridge. ", {"bold": True, "color": INK}),
+          ("%s game codes carried no title at all. Co-occurrence on "
+           "(player, day), constrained to matching providers, recovered %d of "
+           "them — %.0f%% of all stake. It independently derived that "
+           "gpas_3chken_pop is “4 Crazy Cluckers”, from a slug it "
+           "cannot read."
+           % (format(F["games"] - F["displayable"], ","), F["bridge_codes"],
+              F["bridged_pct"]), {})]],
+        [[("Measured honestly. ", {"bold": True, "color": INK}),
+          ("Three-way temporal split — hyperparameters chosen on a "
+           "validation week, never the test week. Gradient boosting won a "
+           "player-split validation and then lost the temporal test: exactly "
+           "the overfitting you cannot see if you only split by user.", {})]],
+    ], size=12)
+    footer(s, "06 / 11")
 
-    # 9 -------------------------------------------------------- compliance
+    # 9 ----------------------------------------------------- architecture
     s = blank(prs)
-    eyebrow(s, "07  /  COMPLIANCE BY DESIGN")
-    y = title(s, "The gate runs before the model.",
-              "And there are two of them, firing at different points, because "
-              "the law treats them differently. Getting either backwards would "
-              "be a real compliance failure — so both are asserted in tests "
-              "rather than described in prose.")
-    table(s, M, y + Inches(0.18), CW, [
-        ["Gate", "Where it fires", "Why there"],
-        [("Age / ID unverified", {"bold": True, "color": RED}),
-         ("At sign-in — refused, no session issued", {"bold": True}),
-         "Croatia's Act on Measures for Socially Responsible Organisation of "
-         "Games of Chance: the check must precede play"],
-        [("Self-excluded", {"bold": True, "color": RED}),
-         ("After sign-in — account opens, lobby returns zero rows", {"bold": True}),
-         "Self-exclusion blocks inducements, not account access. The person "
-         "must still reach their account and support"],
-    ], [0.19, 0.31, 0.50], rowh=Inches(0.66))
-    bullets(s, M, y + Inches(1.98), CW, [
-        [[("Graded inversion. ", {"bold": True, "color": INK}),
-          ("From MODERATE the objective flips — every engagement row is withheld, "
-           "only Nastavi igrati survives, and the withheld rows come back in the "
-           "response so the decision is auditable.", {})]],
-        [[("Explainable by construction. ", {"bold": True, "color": INK}),
-          ("Every tile carries the literal top contributor to its score, and a "
-           "test proves that attribution reconstructs the model's probability "
-           "exactly. EU AI Act 2024/1689.", {})]],
-        [[("No stake suggestion exists in the codebase. ", {"bold": True, "color": INK}),
-          ("Games, never amounts. No countdowns, no scarcity, no “others are "
-           "playing”, no near-miss framing.", {})]],
-    ], size=13)
-    footer(s, "07 / 12")
-
-    # 10 ------------------------------------------------- the business case
-    s = blank(prs)
-    eyebrow(s, "08  /  BUSINESS IMPACT — AND WHAT WE COULD NOT PROVE", GOLD)
-    y = title(s, "We refuse to give you a revenue number.",
-              "We looked for one. Three tests, and it did not survive contact "
-              "with the data. Reporting it anyway would have been the easy thing to do.")
-    half = (CW - Inches(0.4)) / 2
-    rect(s, M, y + Inches(0.18), half, Inches(2.5), fill=PANEL, line=LINE)
-    txt(s, M + Inches(0.26), y + Inches(0.38), half - Inches(0.52), Inches(2.1),
-        [[("What is real", {"size": 14, "bold": True, "color": INK})],
-         [("€19.6M — 13.7% of all stake — sits on games a player was "
-           "trying for the first time. 138,041 first-time adoptions a fortnight, "
-           "median €16.16 each.", {"size": 13, "color": INK2})],
-         [("Tail games are not the cheap end: median stake €17.00 against "
-           "€10.50 for a top-50 game.", {"size": 13, "color": INK2})]],
-        spacing=1.3)
-    rect(s, M + half + Inches(0.4), y + Inches(0.18), half, Inches(2.5),
-         fill=WHITE, line=RED, lw=1.2)
-    txt(s, M + half + Inches(0.66), y + Inches(0.38), half - Inches(0.52), Inches(2.1),
-        [[("What failed", {"size": 14, "bold": True, "color": RED})],
-         [("Breadth correlates hugely with value (1–2 games €16 → 26+ "
-           "games €5,446) — but it is confounded by activity level.",
-           {"size": 13, "color": INK2})],
-         [("Matched on week-3 activity, adopters retain no better: 56.8% vs 57.6%.",
-           {"size": 13, "color": INK2})],
-         [("And they stake less the following week at every matched band — "
-           "€155 against €246.", {"size": 13, "color": INK2})]],
-        spacing=1.3)
-    reframe = ("The reframe. Exploration correlates with lower value because "
-               "exploration currently fails — players hunt and don't find. The "
-               "product's job is not more exploration; it is making the "
-               "exploration they already do succeed. The experiment that "
-               "settles it: A/B on the lobby, primary metric = first-time "
-               "adoptions replayed within 7 days. That separates found "
-               "something good from tried and bounced — exactly what the "
-               "failed tests could not.")
-    rh = text_h(reframe, (CW - Inches(0.56)) / 914400.0, 13, 1.25)
-    rect(s, M, y + Inches(2.9), CW, rh + Inches(0.44), fill=PANEL,
-         line=ACCENT, lw=1.4)
-    txt(s, M + Inches(0.28), y + Inches(3.12), CW - Inches(0.56), rh,
-        [[("The reframe. ", {"bold": True, "color": INK}),
-          ("Exploration correlates with lower value because exploration currently "
-           "fails — players hunt and don't find. The product's job is not more "
-           "exploration; it is making the exploration they already do succeed. ",
-           {}),
-          ("The experiment that settles it: ", {"bold": True, "color": INK}),
-          ("A/B on the lobby, primary metric = first-time adoptions replayed "
-           "within 7 days. That separates “found something good” from "
-           "“tried and bounced” — exactly what the failed tests could not.",
-           {})]],
+    eyebrow(s, "07  /  ARCHITECTURE")
+    y = title(s, "Additive middleware on FEG's own stack.",
+              "One stateless service reading precomputed artifacts. No GPU, "
+              "no model API, and no new instrumentation — it reads the "
+              "warehouse table CA_Player is already exported from.")
+    flow(s, y + Inches(0.16), [
+        ("CA_Player",
+         "The export FEG already produces. Daily batch, no new tracking "
+         "required", None),
+        ("Pipeline",
+         "Clean, name-bridge, features, three-way split. Seconds on one core",
+         None),
+        ("artifacts/",
+         "18 MB — similarity, sequence, catalogue, ranker. Object storage "
+         "or the image", None),
+        ("Service",
+         "Python or Java, stateless, horizontally scaled. ~25 ms, no I/O on "
+         "the request path", ACCENT),
+        ("Vue 3 row",
+         "One component, one JSON contract. Render the rows you recognise, "
+         "ignore the rest", None),
+    ], h=Inches(1.5))
+    rect(s, M, y + Inches(2.0), CW, Inches(0.75), fill=None, line=RED, lw=1.6)
+    txt(s, M + Inches(0.24), y + Inches(2.19), CW - Inches(0.48), Inches(0.5),
+        [[("The responsible-play gate sits inside the service, before scoring "
+           "— ", {"bold": True, "color": RED}),
+          ("not in the client, and not behind a flag anyone can switch off.",
+           {"color": INK2})]], size=13)
+    txt(s, M, y + Inches(2.95), CW, Inches(0.9),
+        [[("What FEG actually builds: ", {"bold": True, "color": INK}),
+          ("a Vue row component (3–4 days), a daily batch job (1 day), "
+           "and a service deployment (2–3 days). Redis and Kafka are only "
+           "needed below a daily cadence, so neither is on the critical path. "
+           "Everything else in the repository is done.", {})]],
         size=13, color=INK2, spacing=1.25)
-    footer(s, "08 / 12")
+    footer(s, "07 / 11")
 
-    # 11 ------------------------------------------------- constraint & ask
+    # 10 ------------------------------------------ responsible (with shot)
     s = blank(prs)
-    eyebrow(s, "09  /  THE CONSTRAINT, AND THE ONE ASK")
-    y = title(s, "%.0f%% of stake is on games we cannot name." % F["unnamed_pct"],
-              "The export identifies most games by opaque codes like "
-              "pop_9f571b7a_egtfeg. They train the model — their co-occurrence "
-              "is real signal — but they can never be recommended, because a "
-              "player has no way to know what they are being offered.")
-    gap = Inches(0.28)
+    eyebrow(s, "08  /  COMPLIANCE BY DESIGN", RED)
+    txt(s, M, Inches(0.66), Inches(6.05), Inches(0.8),
+        "The gate runs before the model.", size=25, bold=True, color=INK,
+        spacing=1.06)
+    txt(s, M, Inches(1.32), Inches(6.05), Inches(1.1),
+        "Two gates, firing at different points, because the law treats them "
+        "differently. Both directions are asserted in tests — getting "
+        "either backwards would be a real compliance failure.",
+        size=13, color=INK2, spacing=1.22)
+    table(s, M, Inches(2.62), Inches(6.05), [
+        ["Gate", "Where it fires"],
+        [("Age / ID unverified", {"bold": True, "color": RED}),
+         "At sign-in — refused, no session issued at all"],
+        [("Self-excluded", {"bold": True, "color": RED}),
+         "After sign-in — the account opens, the lobby returns zero rows"],
+    ], [0.37, 0.63], rowh=Inches(0.6))
+    txt(s, M, Inches(4.62), Inches(6.05), Inches(1.5),
+        [[("Self-exclusion blocks inducements, not account access. ",
+           {"bold": True, "color": INK}),
+          ("The person must still reach their account and support — so "
+           "they sign in, and get zero recommendations plus the required "
+           "surfaces. Not filtered afterwards. Never scored.", {})]],
+        size=12.5, color=INK2, spacing=1.22)
+    picture(s, "05-self-excluded-zero-rows.png", M + Inches(6.5),
+            Inches(1.15), Inches(6.05))
+    txt(s, M + Inches(6.5), Inches(4.95), Inches(6.05), Inches(0.4),
+        "the self-excluded account, signed in — zero rows",
+        size=10.5, color=MUTED, font=MONO)
+    footer(s, "08 / 11")
+
+    # 11 ---------------------------------------------- business + refusal
+    s = blank(prs)
+    eyebrow(s, "09  /  BUSINESS IMPACT", GOLD)
+    y = title(s, "€19.6M a fortnight rides on discovery.",
+              "13.7% of all stake sits on games a player was trying for the "
+              "first time — 138,041 first-time adoptions, median "
+              "€16.16. That entire flow is served today by a search box.")
+    gap = Inches(0.26)
     w3 = (CW - gap * 2) / 3
-    stat(s, M, y + Inches(0.2), w3, "%.0f%%" % F["unnamed_pct"],
-         "of all stake still sits on games with no title we can show a player",
-         color=RED, h=Inches(1.5))
-    stat(s, M + w3 + gap, y + Inches(0.2), w3, str(F["bridge_codes"]),
-         "codes our name bridge recovered from behavioural co-occurrence alone "
-         "— %.0f%% of all stake, taking the catalogue to %d games"
-         % (F["bridged_pct"], F["displayable"]), color=GREEN, h=Inches(1.5))
-    stat(s, M + (w3 + gap) * 2, y + Inches(0.2), w3, "~9×",
-         "the addressable inventory, if FEG shares a game catalogue",
-         color=ACCENT, h=Inches(1.5))
-    txt(s, M, y + Inches(1.95), CW, Inches(0.8),
-        [[("The bridge validates itself. ", {"bold": True, "color": INK}),
-          ("It independently produced gpas_3chken_pop → “4 Crazy "
-           "Cluckers” (111 votes) and gpas_wpisto_pop → “Mega Fire "
-           "Blaze: Wild Pistolero” (48). Both slugs decode to their resolved "
-           "titles — which the algorithm has no way to read.", {})]],
-        size=13.5, color=INK2)
-    rect(s, M, y + Inches(2.72), CW, Inches(1.0), fill=DARK)
-    txt(s, M + Inches(0.3), y + Inches(2.92), CW - Inches(0.6), Inches(0.7),
-        [[("The ask: a game catalogue — code → title, category, thumbnail. ",
-           {"bold": True, "color": WHITE}),
-          ("It costs FEG a database export, it is the single highest-value thing "
-           "we could be given, and it is the only limit here we cannot engineer "
-           "around.", {"color": RGBColor(0xC9, 0xD3, 0xE0)})]],
-        size=14)
-    footer(s, "09 / 12")
+    stat(s, M, y + Inches(0.18), w3, "€19.6M",
+         "on first-time game plays every fortnight — a seventh of all "
+         "stake", color=GOLD, bigsize=31, h=Inches(1.3))
+    stat(s, M + w3 + gap, y + Inches(0.18), w3, "€17.00",
+         "median stake on a newly-adopted tail game, against €10.50 on a "
+         "top-50 game. The tail is not the cheap end", color=GOLD, bigsize=31,
+         h=Inches(1.3))
+    stat(s, M + (w3 + gap) * 2, y + Inches(0.18), w3, "0",
+         "revenue-uplift numbers we are willing to claim. We tested it three "
+         "ways and it did not survive", color=RED, bigsize=31, h=Inches(1.3))
+    rect(s, M, y + Inches(1.72), CW, Inches(1.75), fill=PANEL, line=ACCENT,
+         lw=1.4)
+    txt(s, M + Inches(0.28), y + Inches(1.94), CW - Inches(0.56), Inches(1.4),
+        [[("Matched on activity, adopters retain no better and stake less the "
+           "next week. ", {"bold": True, "color": INK}),
+          ("So we make no revenue claim. What we argue instead: exploration "
+           "correlates with lower value ", {}),
+          ("because exploration currently fails", {"bold": True, "color": INK}),
+          (" — players hunt and don't find. The job is not more "
+           "exploration; it is making the exploration they already do "
+           "succeed.", {})],
+         [("The experiment that settles it: A/B on the lobby, primary metric "
+           "= first-time adoptions replayed within 7 days. That separates "
+           "“found something good” from “tried and "
+           "bounced”.", {"color": INK2})]],
+        size=12.5, color=INK2, spacing=1.25)
+    footer(s, "09 / 11")
 
-    # 12 ---------------------------------------------------------- close
+    # 12 -------------------------------------------------------- the ask
     s = blank(prs)
-    eyebrow(s, "10  /  WHERE IT STANDS")
+    eyebrow(s, "10  /  THE ONE ASK")
+    y = title(s,
+              "%.0f%% of stake is on games we cannot name." % F["unnamed_pct"],
+              "Opaque codes like pop_9f571b7a_egtfeg. They train the model "
+              "— their co-occurrence is real signal — but they can "
+              "never be recommended, because a player cannot know what they "
+              "are being offered.")
+    gap = Inches(0.26)
+    w3 = (CW - gap * 2) / 3
+    stat(s, M, y + Inches(0.18), w3, "%.0f%%" % F["unnamed_pct"],
+         "of all stake, still on games with no title we can show a player",
+         color=RED, bigsize=33, h=Inches(1.3))
+    stat(s, M + w3 + gap, y + Inches(0.18), w3, str(F["bridge_codes"]),
+         "codes our name bridge already recovered from behaviour alone "
+         "— %.0f%% of stake, catalogue up to %d games"
+         % (F["bridged_pct"], F["displayable"]), color=GREEN, bigsize=33,
+         h=Inches(1.3))
+    stat(s, M + (w3 + gap) * 2, y + Inches(0.18), w3, "~9×",
+         "the addressable inventory, if FEG shares a game catalogue",
+         color=ACCENT, bigsize=33, h=Inches(1.3))
+    rect(s, M, y + Inches(1.75), CW, Inches(1.05), fill=DARK)
+    txt(s, M + Inches(0.3), y + Inches(1.97), CW - Inches(0.6), Inches(0.7),
+        [[("A game catalogue — code → title, category, thumbnail. ",
+           {"bold": True, "color": WHITE}),
+          ("It costs FEG a database export. It is the single highest-value "
+           "thing we could be given, and the only limit here we cannot "
+           "engineer around.", {"color": RGBColor(0xC9, 0xD3, 0xE0)})]],
+        size=14)
+    footer(s, "10 / 11")
+
+    # 13 ---------------------------------------------------------- close
+    s = blank(prs)
+    eyebrow(s, "11  /  WHERE IT STANDS")
     y = title(s, "The lobby should know who is looking at it.",
-              "Today it doesn't — one row, %s players, %d games. We measured "
-              "what personalisation can and cannot do here, kept the row that "
-              "already worked, and added the %d games it could never reach."
-              % (format(F["players"], ","), F["cov_pop_disc"], F["cov_ranker"]))
-    half = (CW - Inches(0.4)) / 2
-    rect(s, M, y + Inches(0.18), half, Inches(2.55), fill=PANEL, line=LINE)
-    txt(s, M + Inches(0.26), y + Inches(0.38), half - Inches(0.52), Inches(2.2),
+              "Today it doesn't. We measured what personalisation can and "
+              "cannot do here, kept the row that already worked, and added "
+              "the %d games it could never reach." % F["cov_ranker"])
+    half = (CW - Inches(0.38)) / 2
+    rect(s, M, y + Inches(0.16), half, Inches(2.45), fill=PANEL, line=LINE)
+    txt(s, M + Inches(0.26), y + Inches(0.34), half - Inches(0.52),
+        Inches(2.1),
         [[("Shipped", {"size": 14, "bold": True, "color": GREEN})],
-         [("Pipeline → model → API → lobby, end to end", {"size": 12.5, "color": INK2})],
-         [("A real login journey — anonymous landing, 12 demo accounts", {"size": 12.5, "color": INK2})],
-         [("~25 ms per personalised lobby. No GPU, no model fit at request time", {"size": 12.5, "color": INK2})],
+         [("Pipeline → model → API → lobby, end to end",
+           {"size": 12.5, "color": INK2})],
+         [("A real login journey, 12 accounts from real histories",
+           {"size": 12.5, "color": INK2})],
+         [("~25 ms per lobby. No GPU, no model fit at request time",
+           {"size": 12.5, "color": INK2})],
          [("54 tests, green on a clean clone", {"size": 12.5, "color": INK2})],
-         [("Eight documents — including the evaluation with the negative result in it", {"size": 12.5, "color": INK2})]],
-        spacing=1.35)
-    rect(s, M + half + Inches(0.4), y + Inches(0.18), half, Inches(2.55),
+         [("Eight documents — including the evaluation with the loss in it",
+           {"size": 12.5, "color": INK2})]],
+        spacing=1.32)
+    rect(s, M + half + Inches(0.38), y + Inches(0.16), half, Inches(2.45),
          fill=WHITE, line=LINE)
-    txt(s, M + half + Inches(0.66), y + Inches(0.38), half - Inches(0.52), Inches(2.2),
-        [[("Not built — and we say so", {"size": 14, "bold": True, "color": GOLD})],
-         [("No Vue SDK yet — the dashboard is plain HTML", {"size": 12.5, "color": INK2})],
-         [("No Kafka/Redis — the pipeline is offline, daily batch", {"size": 12.5, "color": INK2})],
-         [("Prototype auth: hashed and signed, but no rate limiting or MFA", {"size": 12.5, "color": INK2})],
+    txt(s, M + half + Inches(0.64), y + Inches(0.34), half - Inches(0.52),
+        Inches(2.1),
+        [[("Not built — and we say so",
+           {"size": 14, "bold": True, "color": GOLD})],
+         [("No Vue SDK yet — the dashboard is plain HTML",
+           {"size": 12.5, "color": INK2})],
+         [("No Kafka/Redis — the pipeline is a daily batch",
+           {"size": 12.5, "color": INK2})],
+         [("Prototype auth: hashed and signed, but no rate limiting or MFA",
+           {"size": 12.5, "color": INK2})],
          [("No session-level sequence model", {"size": 12.5, "color": INK2})],
-         [("No online experiment. Every number here is offline — “longer "
-           "sessions” is an assumption an A/B test must check", {"size": 12.5, "color": INK2})]],
-        spacing=1.35)
-    rect(s, M, y + Inches(2.95), CW, Emu(12700), fill=LINE)
-    txt(s, M, y + Inches(3.15), CW, Inches(0.5),
+         [("No online experiment — every number here is offline",
+           {"size": 12.5, "color": INK2})]],
+        spacing=1.32)
+    rect(s, M, y + Inches(2.82), CW, Emu(12700), fill=LINE)
+    txt(s, M, y + Inches(3.0), CW, Inches(0.5),
         [[("Team Q'Makers  ·  feg-hackathon-2026-QMakers  ·  "
            "FEG Innovation Challenge 2026",
            {"font": MONO, "size": 11.5, "color": MUTED})]])
-    footer(s, "10 / 12")
+    footer(s, "11 / 11")
 
     prs.save(OUT)
     return OUT, F

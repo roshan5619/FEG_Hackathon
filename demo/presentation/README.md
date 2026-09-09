@@ -36,5 +36,12 @@ If you rebuild the deck, these are the slides that matter:
 7. **Impact & ask** — 732 reachable games vs 29; and the one ask that multiplies
    it: a game catalogue, since 58% of stake is on games we cannot name
 
+**[`story.md`](story.md)** is what you actually say — the narrative arc, the
+wording for each beat, the transitions, and the cut-down if you only get five
+minutes. Read that before the deck.
+
+Screenshots in the deck are captured from the running product by
+`python demo/capture_screenshots.py` — nothing is mocked or drawn by hand.
+
 Numbers and method: [`docs/evaluation.md`](../../docs/evaluation.md).
 Run of show: [`live-demo.md`](../live-demo.md) — the demo is given live, not recorded.
